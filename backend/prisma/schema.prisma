@@ -1,0 +1,344 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum SkillType {
+  TAUGHT
+  WANTED
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  ALL_LEVELS
+}
+
+enum SwapStatus {
+  PENDING
+  ACCEPTED
+  ACTIVE
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum CourseVisibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+
+enum PriceType {
+  FREE_WITH_SWAP
+  PAID
+  CREDIT
+}
+
+enum ChatMessageType {
+  STANDARD
+  DOUBT_QUERY
+  VIDEO_DEMAND
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum StorageProvider {
+  GOOGLE_DRIVE
+  AWS_S3
+}
+
+model User {
+  id           String    @id @default(uuid())
+  googleId     String?   @unique @map("google_id")
+  email        String    @unique
+  passwordHash String?   @map("password_hash")
+  name         String
+  avatarUrl    String?   @map("avatar_url")
+  phone        String    @default("")
+  dob          String    @default("")
+  location     String    @default("")
+  bio          String?   @db.Text
+  rating       Decimal   @default(5.00) @db.Decimal(3, 2)
+  reviewCount  Int       @default(0) @map("review_count")
+  isVerified   Boolean   @default(true) @map("is_verified")
+  isMentor     Boolean   @default(false) @map("is_mentor")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  userSkills           UserSkill[]
+  sentProposals        SwapProposal[]     @relation("SentSwaps")
+  receivedProposals    SwapProposal[]     @relation("ReceivedSwaps")
+  courses              Course[]
+  enrollments          Enrollment[]
+  lessonProgress       LessonProgress[]
+  mentorConversations  Conversation[]     @relation("MentorConversations")
+  learnerConversations Conversation[]     @relation("LearnerConversations")
+  sentMessages         ChatMessage[]      @relation("SentMessages")
+  receivedMessages     ChatMessage[]      @relation("ReceivedMessages")
+  wallet               MentorWallet?
+  walletTransactions   WalletTransaction[]
+  reviewsGiven         Review[]           @relation("ReviewsGiven")
+  reviewsReceived      Review[]           @relation("ReviewsReceived")
+  storageSubscriptions StorageSubscription[]
+
+  @@map("users")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  iconName  String   @map("icon_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  skills  Skill[]
+  courses Course[]
+
+  @@map("categories")
+}
+
+model Skill {
+  id          String      @id @default(uuid())
+  categoryId  String      @map("category_id")
+  title       String
+  description String?     @db.Text
+  level       SkillLevel  @default(ALL_LEVELS)
+  mentorCount Int         @default(0) @map("mentor_count")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  category          Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  userSkills        UserSkill[]
+  sentInSwaps       SwapProposal[] @relation("SenderSkills")
+  receivedInSwaps   SwapProposal[] @relation("ReceiverSkills")
+
+  @@index([title])
+  @@map("skills")
+}
+
+model UserSkill {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  skillId   String    @map("skill_id")
+  skillType SkillType @map("skill_type")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId, skillType])
+  @@index([skillId, skillType])
+  @@map("user_skills")
+}
+
+model SwapProposal {
+  id              String     @id @default(uuid())
+  senderId        String     @map("sender_id")
+  receiverId      String     @map("receiver_id")
+  senderSkillId   String     @map("sender_skill_id")
+  receiverSkillId String     @map("receiver_skill_id")
+  status          SwapStatus @default(PENDING)
+  proposedDate    DateTime   @map("proposed_date")
+  message         String     @db.Text
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  sender        User           @relation("SentSwaps", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver      User           @relation("ReceivedSwaps", fields: [receiverId], references: [id], onDelete: Cascade)
+  senderSkill   Skill          @relation("SenderSkills", fields: [senderSkillId], references: [id])
+  receiverSkill Skill          @relation("ReceiverSkills", fields: [receiverSkillId], references: [id])
+  conversations Conversation[]
+
+  @@index([senderId, receiverId, status])
+  @@map("swap_proposals")
+}
+
+model Course {
+  id          String           @id @default(uuid())
+  mentorId    String           @map("mentor_id")
+  categoryId  String           @map("category_id")
+  title       String
+  description String?          @db.Text
+  thumbnailUrl String?         @map("thumbnail_url")
+  level       SkillLevel       @default(ALL_LEVELS)
+  visibility  CourseVisibility @default(PUBLIC)
+  priceType   PriceType        @default(FREE_WITH_SWAP) @map("price_type")
+  priceAmount Decimal          @default(0.00) @db.Decimal(10, 2) @map("price_amount")
+  duration    String           @default("0m")
+  rating      Decimal          @default(5.00) @db.Decimal(3, 2)
+  reviewCount Int              @default(0) @map("review_count")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  mentor      User         @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  category    Category     @relation(fields: [categoryId], references: [id])
+  lessons     Lesson[]
+  enrollments Enrollment[]
+  reviews     Review[]
+
+  @@map("courses")
+}
+
+model Lesson {
+  id              String   @id @default(uuid())
+  courseId        String   @map("course_id")
+  title           String
+  duration        String
+  durationSeconds Int             @default(0) @map("duration_seconds")
+  videoUrl        String          @map("video_url")
+  storageProvider StorageProvider @default(AWS_S3) @map("storage_provider")
+  driveFileId     String?         @map("drive_file_id")
+  s3Key           String?         @map("s3_key")
+  sequenceOrder   Int             @default(1) @map("sequence_order")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@index([courseId, sequenceOrder])
+  @@map("lessons")
+}
+
+model Enrollment {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  courseId       String   @map("course_id")
+  progressPercent Int     @default(0) @map("progress_percent")
+  enrolledAt     DateTime @default(now()) @map("enrolled_at")
+  lastAccessedAt DateTime @updatedAt @map("last_accessed_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  lessonId       String   @map("lesson_id")
+  watchedSeconds Int      @default(0) @map("watched_seconds")
+  isCompleted    Boolean  @default(false) @map("is_completed")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Conversation {
+  id                    String    @id @default(uuid())
+  mentorId              String    @map("mentor_id")
+  learnerId             String    @map("learner_id")
+  swapId                String?   @map("swap_id")
+  lastMessage           String?   @db.Text @map("last_message")
+  lastMessageTimestamp  DateTime  @default(now()) @map("last_message_timestamp")
+  hasDoubtPending       Boolean   @default(false) @map("has_doubt_pending")
+  hasVideoDemandPending Boolean   @default(false) @map("has_video_demand_pending")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  mentor   User          @relation("MentorConversations", fields: [mentorId], references: [id])
+  learner  User          @relation("LearnerConversations", fields: [learnerId], references: [id])
+  swap     SwapProposal? @relation(fields: [swapId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+
+  @@unique([mentorId, learnerId])
+  @@map("conversations")
+}
+
+model ChatMessage {
+  id                String          @id @default(uuid())
+  conversationId    String          @map("conversation_id")
+  senderId          String          @map("sender_id")
+  recipientId       String          @map("recipient_id")
+  text              String          @db.Text
+  type              ChatMessageType @default(STANDARD)
+  referenceTopic    String?         @map("reference_topic")
+  referenceCourseId String?         @map("reference_course_id")
+  status            MessageStatus   @default(SENT)
+  isEncrypted       Boolean         @default(true) @map("is_encrypted")
+  isResolved        Boolean         @default(false) @map("is_resolved")
+  isAccepted        Boolean         @default(false) @map("is_accepted")
+  demandVotes       Int             @default(1) @map("demand_votes")
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("SentMessages", fields: [senderId], references: [id])
+  recipient    User         @relation("ReceivedMessages", fields: [recipientId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@map("chat_messages")
+}
+
+model MentorWallet {
+  userId         String   @id @map("user_id")
+  balance        Decimal  @default(0.00) @db.Decimal(12, 2)
+  pendingPayout  Decimal  @default(0.00) @db.Decimal(12, 2) @map("pending_payout")
+  totalEarned    Decimal  @default(0.00) @db.Decimal(12, 2) @map("total_earned")
+  monthlyRevenue Decimal  @default(0.00) @db.Decimal(12, 2) @map("monthly_revenue")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mentor_wallets")
+}
+
+model WalletTransaction {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String
+  subtitle  String
+  amount    Decimal  @db.Decimal(10, 2)
+  isCredit  Boolean  @default(true) @map("is_credit")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("wallet_transactions")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  reviewerId String   @map("reviewer_id")
+  mentorId   String   @map("mentor_id")
+  courseId   String?  @map("course_id")
+  rating     Int
+  comment    String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  reviewer User    @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  mentor   User    @relation("ReviewsReceived", fields: [mentorId], references: [id], onDelete: Cascade)
+  course   Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@map("reviews")
+}
+
+model StorageSubscription {
+  id                String          @id @default(uuid())
+  userId            String          @map("user_id")
+  planId            String          @map("plan_id")
+  provider          StorageProvider @default(AWS_S3)
+  storageLimitBytes BigInt          @default(26843545600) @map("storage_limit_bytes")
+  usedStorageBytes  BigInt          @default(0) @map("used_storage_bytes")
+  isActive          Boolean         @default(true) @map("is_active")
+  expiresAt         DateTime?       @map("expires_at")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("storage_subscriptions")
+}

@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Skill Builder</string>
+    <string name="tagline">Learn Skill. Swap Skill. Build Together.</string>
+    <string name="continue_with_google">Continue with Google</string>
+    <string name="sign_in_title">Welcome to Skill Builder</string>
+    <string name="sign_in_subtitle">Log in to learn, swap, and teach skills.</string>
+    <string name="swap_skills">Skill Swap</string>
+    <string name="learn">Learn</string>
+    <string name="studio">Creator Studio</string>
+    <string name="profile">Profile</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="light_mode">Light Mode</string>
+    <string name="google_auth_failed">Google sign-in was canceled or failed.</string>
+    <string name="default_web_client_id">283080612806-j4o2vg5g8pvrrj1a914cfnvauhlh3qmb.apps.googleusercontent.com</string>
+</resources>
