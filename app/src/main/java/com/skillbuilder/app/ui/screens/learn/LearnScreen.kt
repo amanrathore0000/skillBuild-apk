@@ -1,8 +1,8 @@
 package com.skillbuilder.app.ui.screens.learn
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +25,6 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.School
-import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -52,6 +51,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.skillbuilder.app.data.local.AppSettings
+import com.skillbuilder.app.data.local.AppThemeMode
 import com.skillbuilder.app.data.local.SampleData
 import com.skillbuilder.app.data.local.UserSession
 import com.skillbuilder.app.domain.model.Course
@@ -66,6 +67,24 @@ fun LearnScreen(
     var selectedVideoForPlayer by remember { mutableStateOf<MentorVideo?>(null) }
     val enrolledIds by UserSession.enrolledVideoIds.collectAsState()
     val allVideos by SampleData.allVideosFlow.collectAsState()
+    val themeMode by AppSettings.themeMode.collectAsState()
+
+    val systemDark = isSystemInDarkTheme()
+    val isDark = when (themeMode) {
+        AppThemeMode.SYSTEM -> systemDark
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK -> true
+    }
+
+    // Dynamic Theme Colors matching the rest of the application
+    val screenBg = if (isDark) Color(0xFF2B2B2B) else Color(0xFFFFFFFF)
+    val textPrimary = if (isDark) Color(0xFFFFFFFF) else Color(0xFF111827)
+    val textSecondary = if (isDark) Color(0xFFB3B3B3) else Color(0xFF6B7280)
+    val headerColor = if (isDark) Color(0xFFB3B3B3) else Color(0xFF6B7280)
+    val activeAccent = if (isDark) Color(0xFF5995E5) else Color(0xFF2464B8)
+    val cardBg = if (isDark) Color(0xFF383838) else Color(0xFFF3F4F6)
+    val cardFooterBg = if (isDark) Color(0xFF303030) else Color(0xFFECEEF2)
+    val pillBg = if (isDark) Color(0xFF424242) else Color(0xFFE5E7EB)
 
     val handlePlayVideo: (MentorVideo) -> Unit = { video ->
         onOpenVideo(video)
@@ -83,10 +102,11 @@ fun LearnScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(screenBg),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Section Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -96,26 +116,31 @@ fun LearnScreen(
                 Column {
                     Text(
                         text = "MY ENROLLED COURSES & VIDEOS",
-                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            letterSpacing = 1.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        ),
+                        color = headerColor
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Your Purchased & Active Learning Paths",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                        color = textSecondary
                     )
                 }
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF10B981).copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.3f))
+                    shape = RoundedCornerShape(6.dp),
+                    color = activeAccent.copy(alpha = 0.15f)
                 ) {
                     Text(
                         text = "$totalActiveCount Active",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF10B981),
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = activeAccent,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -129,8 +154,8 @@ fun LearnScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 24.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = cardBg)
                 ) {
                     Column(
                         modifier = Modifier
@@ -142,13 +167,13 @@ fun LearnScreen(
                             modifier = Modifier
                                 .size(64.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                .background(activeAccent.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Rounded.School,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = activeAccent,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -158,15 +183,15 @@ fun LearnScreen(
                         Text(
                             text = "No Courses Enrolled Yet",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = textPrimary
                         )
 
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = "Explore the YouTube-style video feed, watch free 30-second trials, and enroll to unlock full lifetime courses.",
+                            text = "Explore courses, watch free previews, and enroll to unlock full lifetime access.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = textSecondary,
                             textAlign = TextAlign.Center
                         )
 
@@ -175,8 +200,11 @@ fun LearnScreen(
                         if (onExploreCourses != null) {
                             Button(
                                 onClick = onExploreCourses,
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = activeAccent,
+                                    contentColor = Color.White
+                                )
                             ) {
                                 Text("Browse All Videos & Courses", fontWeight = FontWeight.Bold)
                             }
@@ -192,9 +220,8 @@ fun LearnScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { handlePlayVideo(video) },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.5.dp, Color(0xFF10B981).copy(alpha = 0.45f))
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = cardBg)
             ) {
                 Column {
                     Row(
@@ -207,7 +234,7 @@ fun LearnScreen(
                                 .width(110.dp)
                                 .aspectRatio(16f / 9f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(cardFooterBg)
                         ) {
                             if (!video.thumbnailUrl.isNullOrBlank()) {
                                 AsyncImage(
@@ -223,7 +250,7 @@ fun LearnScreen(
                                     .align(Alignment.BottomEnd)
                                     .padding(4.dp),
                                 shape = RoundedCornerShape(4.dp),
-                                color = Color.Black.copy(alpha = 0.75f)
+                                color = Color(0xFF1E1E1E).copy(alpha = 0.85f)
                             ) {
                                 Text(
                                     text = video.duration,
@@ -240,7 +267,7 @@ fun LearnScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = Color(0xFF10B981).copy(alpha = 0.15f)
+                                color = activeAccent.copy(alpha = 0.15f)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -249,14 +276,14 @@ fun LearnScreen(
                                     Icon(
                                         Icons.Rounded.CheckCircle,
                                         contentDescription = null,
-                                        tint = Color(0xFF10B981),
+                                        tint = activeAccent,
                                         modifier = Modifier.size(11.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "UNLOCKED • FULL ACCESS",
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                        color = Color(0xFF10B981),
+                                        color = activeAccent,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -267,7 +294,7 @@ fun LearnScreen(
                             Text(
                                 text = video.title,
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = textPrimary,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 lineHeight = 18.sp
@@ -278,7 +305,7 @@ fun LearnScreen(
                             Text(
                                 text = "by ${video.mentorName} • ${video.category}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = textSecondary
                             )
                         }
                     }
@@ -287,22 +314,25 @@ fun LearnScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFF10B981).copy(alpha = 0.06f))
+                            .background(cardFooterBg)
                             .padding(horizontal = 14.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "Lifetime Access Active",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF10B981),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = activeAccent,
                             fontWeight = FontWeight.SemiBold
                         )
 
                         Button(
                             onClick = { handlePlayVideo(video) },
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = activeAccent,
+                                contentColor = Color.White
+                            ),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                         ) {
                             Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -314,10 +344,17 @@ fun LearnScreen(
             }
         }
 
-        // Standard enrolled swap courses
+        // Standard enrolled courses
         items(SampleData.enrolledCourses) { course ->
             CourseProgressCard(
                 course = course,
+                isDark = isDark,
+                cardBg = cardBg,
+                cardFooterBg = cardFooterBg,
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
+                activeAccent = activeAccent,
+                pillBg = pillBg,
                 onPlayLesson = { lesson ->
                     handlePlayVideo(course.toMentorVideo(lesson))
                 }
@@ -336,6 +373,13 @@ fun LearnScreen(
 @Composable
 private fun CourseProgressCard(
     course: Course,
+    isDark: Boolean,
+    cardBg: Color,
+    cardFooterBg: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    activeAccent: Color,
+    pillBg: Color,
     onPlayLesson: (Lesson) -> Unit
 ) {
     var isCurriculumExpanded by remember { mutableStateOf(false) }
@@ -347,9 +391,8 @@ private fun CourseProgressCard(
             .clickable {
                 nextLesson?.let { onPlayLesson(it) }
             },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -359,12 +402,12 @@ private fun CourseProgressCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    color = activeAccent.copy(alpha = 0.15f)
                 ) {
                     Text(
                         text = course.price,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = activeAccent,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
@@ -372,8 +415,8 @@ private fun CourseProgressCard(
 
                 Text(
                     text = "${course.progressPercent}% Complete",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    color = activeAccent,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -383,7 +426,7 @@ private fun CourseProgressCard(
             Text(
                 text = course.title,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface
+                color = textPrimary
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -391,7 +434,7 @@ private fun CourseProgressCard(
             Text(
                 text = "Mentor: ${course.mentorName} • ${course.duration}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = textSecondary
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -402,8 +445,8 @@ private fun CourseProgressCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                color = activeAccent,
+                trackColor = pillBg
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -413,8 +456,8 @@ private fun CourseProgressCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(cardFooterBg)
                         .clickable { onPlayLesson(nextLesson) }
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -428,13 +471,13 @@ private fun CourseProgressCard(
                             modifier = Modifier
                                 .size(32.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
+                                .background(activeAccent),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Rounded.PlayArrow,
                                 contentDescription = "Play",
-                                tint = MaterialTheme.colorScheme.onPrimary,
+                                tint = Color.White,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -442,13 +485,13 @@ private fun CourseProgressCard(
                         Column {
                             Text(
                                 text = "Next Lesson",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = textSecondary
                             )
                             Text(
                                 text = nextLesson.title,
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = textPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -457,8 +500,8 @@ private fun CourseProgressCard(
 
                     Text(
                         text = nextLesson.duration,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        color = textSecondary
                     )
                 }
             }
@@ -478,12 +521,12 @@ private fun CourseProgressCard(
                     Text(
                         text = if (isCurriculumExpanded) "Hide Lessons ▲" else "View All ${course.lessons.size} Lessons ▼",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary
+                        color = activeAccent
                     )
                     Text(
                         text = "Tap to play any lesson",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = textSecondary
                     )
                 }
 
@@ -497,8 +540,7 @@ private fun CourseProgressCard(
                         course.lessons.forEachIndexed { index, lesson ->
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.background,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+                                color = cardFooterBg,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { onPlayLesson(lesson) }
@@ -514,14 +556,14 @@ private fun CourseProgressCard(
                                     ) {
                                         Surface(
                                             shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                            color = activeAccent.copy(alpha = 0.15f),
                                             modifier = Modifier.size(24.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Text(
                                                     text = "${index + 1}",
                                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
-                                                    color = MaterialTheme.colorScheme.primary
+                                                    color = activeAccent
                                                 )
                                             }
                                         }
@@ -529,7 +571,7 @@ private fun CourseProgressCard(
                                         Text(
                                             text = lesson.title,
                                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                                            color = MaterialTheme.colorScheme.onSurface,
+                                            color = textPrimary,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -539,13 +581,13 @@ private fun CourseProgressCard(
                                         Text(
                                             text = lesson.duration,
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = textSecondary
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Icon(
                                             imageVector = Icons.Rounded.PlayCircle,
                                             contentDescription = "Play",
-                                            tint = MaterialTheme.colorScheme.primary,
+                                            tint = activeAccent,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -586,4 +628,3 @@ private fun Course.toMentorVideo(lesson: Lesson): MentorVideo {
         tags = listOf(category, "Enrolled", "Full Course", "HD Video", "Certificate Eligible")
     )
 }
-

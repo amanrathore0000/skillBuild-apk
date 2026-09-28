@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.LocationOn
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Stars
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -270,7 +272,7 @@ fun RegisterScreen(
                             text = "G",
                             fontWeight = FontWeight.Black,
                             fontSize = 14.sp,
-                            color = Color(0xFF4285F4)
+                            color = Color(0xFF2464B8)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
@@ -315,12 +317,44 @@ fun RegisterScreen(
                     ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text(
-                        text = errorMessage ?: "",
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(12.dp)
-                    )
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Rounded.WarningAmber,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = errorMessage ?: "",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        if (errorMessage?.contains("already registered", ignoreCase = true) == true) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = onNavigateToLogin,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.Login,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Go to Log In Screen",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -344,7 +378,10 @@ fun RegisterScreen(
             // 1. Full Name
             OutlinedTextField(
                 value = fullName,
-                onValueChange = { fullName = it },
+                onValueChange = {
+                    fullName = it
+                    errorMessage = null
+                },
                 label = { Text(if (isMentor) "Full Name *" else "Full Name *") },
                 leadingIcon = { Icon(Icons.Rounded.Person, contentDescription = null) },
                 singleLine = true,
@@ -358,7 +395,10 @@ fun RegisterScreen(
             // 2. Email Address
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    errorMessage = null
+                },
                 label = { Text(if (isMentor) "Email Address *" else "Email Address *") },
                 leadingIcon = { Icon(Icons.Rounded.Email, contentDescription = null) },
                 singleLine = true,
@@ -372,7 +412,10 @@ fun RegisterScreen(
             // 3. Password
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    errorMessage = null
+                },
                 label = { Text("Password *") },
                 leadingIcon = { Icon(Icons.Rounded.Lock, contentDescription = null) },
                 trailingIcon = {

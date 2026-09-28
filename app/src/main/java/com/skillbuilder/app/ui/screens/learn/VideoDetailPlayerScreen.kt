@@ -86,6 +86,7 @@ import com.skillbuilder.app.data.local.StoragePlanManager
 import com.skillbuilder.app.data.local.UserSession
 import com.skillbuilder.app.data.local.tr
 import com.skillbuilder.app.domain.model.MentorVideo
+import com.skillbuilder.app.data.local.UserAccountRepository
 import com.skillbuilder.app.ui.components.VideoPlayer
 import com.skillbuilder.app.ui.screens.chat.EncryptedChatScreen
 
@@ -98,8 +99,38 @@ fun VideoDetailPlayerScreen(
 ) {
     val context = LocalContext.current
     var currentVideo by remember(video) { mutableStateOf(video) }
+    val currentUser by UserSession.currentUser.collectAsState()
     val enrolledIds by UserSession.enrolledVideoIds.collectAsState()
-    val isEnrolled = currentVideo.id in enrolledIds
+    val isOwner = currentUser.id.isNotBlank() && currentVideo.uploaderId.isNotBlank() && currentUser.id == currentVideo.uploaderId
+    val isMentorOrOwner = isOwner
+    val isEnrolled = isOwner || (currentVideo.id in enrolledIds)
+    val isFree = currentVideo.price.equals("Free", ignoreCase = true)
+    val isVideoUnlocked = isEnrolled || isFree
+
+    val matchedMentor = remember(currentVideo) {
+        val fromSample = SampleData.mentors.find {
+            (currentVideo.uploaderId.isNotBlank() && it.id == currentVideo.uploaderId) ||
+            it.name.equals(currentVideo.mentorName, ignoreCase = true)
+        }
+        if (fromSample != null) fromSample
+        else {
+            try {
+                UserAccountRepository.getInstance(context).getRegisteredAccounts()
+                    .filter { it.isMentor }
+                    .map { it.toUser() }
+                    .find {
+                        (currentVideo.uploaderId.isNotBlank() && it.id == currentVideo.uploaderId) ||
+                        it.name.equals(currentVideo.mentorName, ignoreCase = true)
+                    }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+    val matchedMentorId = matchedMentor?.id
+        ?: if (currentVideo.uploaderId.isNotBlank()) currentVideo.uploaderId
+        else "mentor_${currentVideo.mentorName.lowercase().trim().replace(" ", "_")}"
+    val matchedMentorName = matchedMentor?.name ?: currentVideo.mentorName
 
     var showEnrollSheet by remember { mutableStateOf(false) }
     var paymentSuccess by remember { mutableStateOf(false) }
@@ -122,12 +153,13 @@ fun VideoDetailPlayerScreen(
         (sameCategory + otherVideos).distinctBy { it.id }
     }
 
-    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    androidx.activity.compose.BackHandler(enabled = !isEncryptedChatOpen, onBack = onDismiss)
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
             Column(modifier = Modifier.fillMaxSize()) {
 
                 // ── TOP NAVIGATION BAR (Header) ──────────────────────────────
@@ -191,13 +223,13 @@ fun VideoDetailPlayerScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.Black)
+                        .background(Color(0xFF2B2B2B))
                 ) {
                     VideoPlayer(
                         videoUrl = currentVideo.videoUrl,
                         title = currentVideo.title,
                         modifier = Modifier.fillMaxWidth(),
-                        isTrialMode = !isEnrolled,
+                        isTrialMode = !isVideoUnlocked,
                         trialLimitMillis = 30_000L,
                         onTrialExpired = {
                             Toast.makeText(context, "30-second trial finished. Enroll to unlock full course!", Toast.LENGTH_SHORT).show()
@@ -213,7 +245,7 @@ fun VideoDetailPlayerScreen(
                             .align(Alignment.TopStart)
                             .padding(10.dp),
                         shape = RoundedCornerShape(6.dp),
-                        color = if (isEnrolled) Color(0xFF10B981).copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.75f)
+                        color = if (isEnrolled) MaterialTheme.colorScheme.primary else Color(0xFF2B2B2B).copy(alpha = 0.75f)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -227,7 +259,10 @@ fun VideoDetailPlayerScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = if (isEnrolled) tr("UNLOCKED ACCESS", "पूर्ण ऐक्सेस उपलब्ध") else tr("TRIAL VIDEO PREVIEW", "ट्रायल वीडियो प्रिव्यू"),
+                                text = if (isMentorOrOwner) tr("MENTOR PREVIEW (FULL ACCESS)", "मेंटर प्रिव्यू (पूर्ण एक्सेस)")
+                                       else if (isEnrolled) tr("ENROLLED (FULL ACCESS)", "नामांकित (पूर्ण ऐक्सेस)")
+                                       else if (isFree) tr("FREE LESSON PREVIEW", "निःशुल्क पाठ प्रिव्यू")
+                                       else tr("TRIAL VIDEO PREVIEW", "ट्रायल वीडियो प्रिव्यू"),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
@@ -279,13 +314,13 @@ fun VideoDetailPlayerScreen(
                             // Price Tag Chip
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = if (currentVideo.price == "Free") Color(0xFF10B981).copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                border = BorderStroke(1.dp, if (currentVideo.price == "Free") Color(0xFF10B981) else MaterialTheme.colorScheme.primary)
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                             ) {
                                 Text(
                                     text = if (currentVideo.price == "Free") tr("FREE TRIAL & COURSE", "निःशुल्क कोर्स") else currentVideo.price,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (currentVideo.price == "Free") Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.ExtraBold,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                 )
@@ -349,7 +384,7 @@ fun VideoDetailPlayerScreen(
                                     Icon(
                                         imageVector = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                                         contentDescription = "Like",
-                                        tint = if (isLiked) Color(0xFFE91E63) else MaterialTheme.colorScheme.onSurfaceVariant
+                                        tint = if (isLiked) Color(0xFF2464B8) else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -361,7 +396,7 @@ fun VideoDetailPlayerScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 MiniStat(icon = Icons.Rounded.Visibility, text = "${currentVideo.views / 1000}K views")
-                                MiniStat(icon = Icons.Rounded.Favorite, text = "${currentVideo.likes}", tintOverride = Color(0xFFE91E63))
+                                MiniStat(icon = Icons.Rounded.Favorite, text = "${currentVideo.likes}", tintOverride = Color(0xFF2464B8))
                                 Text(
                                     text = "Duration: ${currentVideo.duration}",
                                     style = MaterialTheme.typography.labelSmall,
@@ -376,36 +411,48 @@ fun VideoDetailPlayerScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // Quick Chat Action: Ask Doubt (Demand Video removed)
+                            // Quick Chat Action: Ask Doubt (Mentor Direct DM)
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFFF59E0B).copy(alpha = 0.12f),
-                                border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.35f)),
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isEnrolled) Color(0xFFF59E0B).copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isEnrolled) Color(0xFFF59E0B).copy(alpha = 0.45f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(12.dp))
                                     .clickable {
-                                        isEncryptedChatOpen = true
+                                        if (isEnrolled) {
+                                            isEncryptedChatOpen = true
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "Please enroll in this course to ask doubts directly to ${currentVideo.mentorName}!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            showEnrollSheet = true
+                                        }
                                     }
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                        .padding(horizontal = 14.dp, vertical = 11.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
                                 ) {
                                     Icon(
-                                        Icons.Rounded.QuestionAnswer,
+                                        if (isEnrolled) Icons.Rounded.QuestionAnswer else Icons.Rounded.Lock,
                                         contentDescription = null,
-                                        tint = Color(0xFFD97706),
-                                        modifier = Modifier.size(17.dp)
+                                        tint = if (isEnrolled) Color(0xFFD97706) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "Ask Doubt 💬",
+                                        text = if (isEnrolled) "Ask Doubt to ${currentVideo.mentorName} 💬" else "Ask Doubt 💬 (Enroll to Chat with Mentor)",
                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = Color(0xFFD97706),
+                                        color = if (isEnrolled) Color(0xFFD97706) else MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 13.sp
                                     )
                                 }
@@ -435,30 +482,64 @@ fun VideoDetailPlayerScreen(
                                     color = Color(0xFF10B981).copy(alpha = 0.12f),
                                     border = BorderStroke(1.5.dp, Color(0xFF10B981).copy(alpha = 0.4f))
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                Icons.Rounded.CheckCircle,
-                                                contentDescription = null,
-                                                tint = Color(0xFF10B981),
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Column {
-                                                Text(
-                                                    text = tr("Enrolled in Course", "कोर्स में नामांकित हैं"),
-                                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = Color(0xFF10B981)
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                                Icon(
+                                                    Icons.Rounded.CheckCircle,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFF10B981),
+                                                    modifier = Modifier.size(24.dp)
                                                 )
-                                                Text(
-                                                    text = tr("You have full lifetime access to this course.", "आपके पास इस कोर्स का आजीवन ऐक्सेस है।"),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column {
+                                                    Text(
+                                                        text = if (isMentorOrOwner) tr("Your Published Course", "आपका प्रकाशित कोर्स") else tr("Enrolled in Course", "कोर्स में नामांकित हैं"),
+                                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                        color = Color(0xFF10B981)
+                                                    )
+                                                    Text(
+                                                        text = if (isMentorOrOwner) tr("Full creator preview & lesson streaming active.", "पूर्ण क्रिएटर प्रिव्यू एवं वीडियो स्ट्रीमिंग सक्रिय है।")
+                                                               else tr("Full lifetime access & direct mentor doubt clearing unlocked.", "आजीवन ऐक्सेस एवं मेंटर चैट अनलॉक है।"),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        if (!isMentorOrOwner) {
+                                            Spacer(modifier = Modifier.height(10.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = Color(0xFF10B981).copy(alpha = 0.2f),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable { isEncryptedChatOpen = true }
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center
+                                                ) {
+                                                    Icon(
+                                                        Icons.Rounded.QuestionAnswer,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFF047857),
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = "Chat with Mentor (${currentVideo.mentorName})",
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                        color = Color(0xFF047857)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -785,6 +866,27 @@ fun VideoDetailPlayerScreen(
                     Button(
                         onClick = {
                             showEnrollSheet = false
+                            isEncryptedChatOpen = true
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFF59E0B),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(Icons.Rounded.QuestionAnswer, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(tr("Ask Doubt to ${currentVideo.mentorName} Now 💬", "अभी मेंटर से डाउट पूछें 💬"), fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = {
+                            showEnrollSheet = false
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -963,23 +1065,19 @@ fun VideoDetailPlayerScreen(
                 }
             }
         }
-
-        // Encrypted Chat with this Video's Mentor
-        if (isEncryptedChatOpen) {
-            val mentorUser = SampleData.mentors.find {
-                it.name.equals(currentVideo.mentorName, ignoreCase = true)
-            }
-            val mentorId = mentorUser?.id ?: "mentor_${currentVideo.mentorName.replace(" ", "_").lowercase()}"
-
-            EncryptedChatScreen(
-                initialMentorId = mentorId,
-                initialMentorName = currentVideo.mentorName,
-                initialReferenceTopic = currentVideo.title,
-                initialOpenAskDoubt = false,
-                onDismiss = { isEncryptedChatOpen = false }
-            )
-        }
     }
+
+    // ── ENCRYPTED CHAT / DIRECT DM WITH MENTOR (Ask Doubt) ─────────────────────
+    if (isEncryptedChatOpen) {
+        EncryptedChatScreen(
+            initialMentorId = matchedMentorId,
+            initialMentorName = matchedMentorName,
+            initialReferenceTopic = currentVideo.title,
+            initialOpenAskDoubt = false,
+            onDismiss = { isEncryptedChatOpen = false }
+        )
+    }
+}
 }
 
 @Composable
@@ -1037,7 +1135,7 @@ private fun SuggestedVideoItem(
                         .align(Alignment.BottomEnd)
                         .padding(4.dp),
                     shape = RoundedCornerShape(4.dp),
-                    color = Color.Black.copy(alpha = 0.75f)
+                    color = Color(0xFF2B2B2B).copy(alpha = 0.75f)
                 ) {
                     Text(
                         text = video.duration,

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default phone screens (360dp - 480dp width) -->
+    <dimen name="splash_logo_width">240dp</dimen>
+    <dimen name="splash_logo_height">77dp</dimen>
+    <dimen name="splash_icon_size">120dp</dimen>
+    <dimen name="splash_v31_size">112dp</dimen>
+</resources>

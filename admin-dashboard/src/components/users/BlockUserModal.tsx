@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AdminUser, UserStatus } from '../../types/admin';
-import { AlertOctagon, X, ShieldAlert, Ban, Clock, AlertTriangle } from 'lucide-react';
+import { AlertOctagon, X, Ban, Clock, AlertTriangle } from 'lucide-react';
 
 interface BlockUserModalProps {
   user: AdminUser | null;
@@ -51,20 +51,21 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
-              width: '36px',
-              height: '36px',
+              width: '38px',
+              height: '38px',
               borderRadius: '10px',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--danger)'
+              color: '#ef4444'
             }}>
               <AlertOctagon size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '17px', fontWeight: 800 }}>Account Moderation & Access Control</h3>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Action against bad practice or policy violation</p>
+              <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#09090b' }}>Account Moderation & Access Control</h3>
+              <p style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Action against bad practice or policy violation</p>
             </div>
           </div>
           <button
@@ -83,34 +84,34 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
-            padding: '14px',
-            background: 'rgba(0, 0, 0, 0.25)',
+            padding: '16px',
+            background: '#f8fafc',
             borderRadius: '12px',
-            border: '1px solid var(--border-subtle)',
+            border: '1px solid #e2e8f0',
             marginBottom: '20px'
           }}>
             <img
               src={user.avatarUrl}
               alt={user.name}
-              style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
+              style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontWeight: 700, fontSize: '15px' }}>{user.name}</span>
-                <span className={`badge badge-${user.role.toLowerCase()}`}>{user.role}</span>
+                <span style={{ fontWeight: 800, fontSize: '15px', color: '#09090b' }}>{user.name}</span>
+                <span className="badge badge-active">{user.role}</span>
               </div>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{user.email}</p>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '4px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+              <p style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>{user.email}</p>
+              <div style={{ display: 'flex', gap: '14px', marginTop: '6px', fontSize: '12px', color: '#334155', fontWeight: 600 }}>
                 <span>Trust Score: <strong>{user.trustScore}%</strong></span>
                 <span>Uploads: <strong>{user.uploadsCount}</strong></span>
-                <span>Past Warnings: <strong style={{ color: user.warningCount > 0 ? 'var(--warning)' : 'inherit' }}>{user.warningCount}</strong></span>
+                <span>Warnings: <strong style={{ color: user.warningCount > 0 ? '#b91c1c' : 'inherit' }}>{user.warningCount}</strong></span>
               </div>
             </div>
           </div>
 
           {/* Action Selector */}
           <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#09090b', marginBottom: '8px' }}>
               Select Moderation Action
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -120,19 +121,20 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
                 style={{
                   padding: '12px 10px',
                   borderRadius: '10px',
-                  border: `1.5px solid ${actionType === 'BLOCK' ? 'var(--danger)' : 'var(--border-subtle)'}`,
-                  background: actionType === 'BLOCK' ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-input)',
-                  color: actionType === 'BLOCK' ? '#fff' : 'var(--text-secondary)',
+                  border: `2px solid ${actionType === 'BLOCK' ? '#ef4444' : '#e2e8f0'}`,
+                  background: actionType === 'BLOCK' ? '#fef2f2' : '#ffffff',
+                  color: actionType === 'BLOCK' ? '#b91c1c' : '#334155',
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  boxShadow: actionType === 'BLOCK' ? '0 2px 8px rgba(239, 68, 68, 0.15)' : 'none'
                 }}
               >
-                <Ban size={20} color={actionType === 'BLOCK' ? 'var(--danger)' : 'currentColor'} />
-                <span style={{ fontSize: '13px', fontWeight: 700 }}>Block Account</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Revoke Access</span>
+                <Ban size={20} color="#ef4444" />
+                <span style={{ fontSize: '13px', fontWeight: 800 }}>Block Account</span>
+                <span style={{ fontSize: '10px', color: '#64748b' }}>Revoke Access</span>
               </button>
 
               <button
@@ -141,19 +143,20 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
                 style={{
                   padding: '12px 10px',
                   borderRadius: '10px',
-                  border: `1.5px solid ${actionType === 'SUSPEND' ? 'var(--warning)' : 'var(--border-subtle)'}`,
-                  background: actionType === 'SUSPEND' ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-input)',
-                  color: actionType === 'SUSPEND' ? '#fff' : 'var(--text-secondary)',
+                  border: `2px solid ${actionType === 'SUSPEND' ? '#ef4444' : '#e2e8f0'}`,
+                  background: actionType === 'SUSPEND' ? '#fef2f2' : '#ffffff',
+                  color: actionType === 'SUSPEND' ? '#b91c1c' : '#334155',
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  boxShadow: actionType === 'SUSPEND' ? '0 2px 8px rgba(239, 68, 68, 0.15)' : 'none'
                 }}
               >
-                <Clock size={20} color={actionType === 'SUSPEND' ? 'var(--warning)' : 'currentColor'} />
-                <span style={{ fontSize: '13px', fontWeight: 700 }}>Suspend</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Temporary Hold</span>
+                <Clock size={20} color="#ef4444" />
+                <span style={{ fontSize: '13px', fontWeight: 800 }}>Suspend</span>
+                <span style={{ fontSize: '10px', color: '#64748b' }}>Temporary Hold</span>
               </button>
 
               <button
@@ -162,19 +165,20 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
                 style={{
                   padding: '12px 10px',
                   borderRadius: '10px',
-                  border: `1.5px solid ${actionType === 'WARN' ? 'var(--info)' : 'var(--border-subtle)'}`,
-                  background: actionType === 'WARN' ? 'rgba(14, 165, 233, 0.15)' : 'var(--bg-input)',
-                  color: actionType === 'WARN' ? '#fff' : 'var(--text-secondary)',
+                  border: `2px solid ${actionType === 'WARN' ? '#ef4444' : '#e2e8f0'}`,
+                  background: actionType === 'WARN' ? '#fef2f2' : '#ffffff',
+                  color: actionType === 'WARN' ? '#b91c1c' : '#334155',
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  boxShadow: actionType === 'WARN' ? '0 2px 8px rgba(239, 68, 68, 0.15)' : 'none'
                 }}
               >
-                <AlertTriangle size={20} color={actionType === 'WARN' ? 'var(--info)' : 'currentColor'} />
-                <span style={{ fontSize: '13px', fontWeight: 700 }}>Issue Warning</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Deduct Trust</span>
+                <AlertTriangle size={20} color="#ef4444" />
+                <span style={{ fontSize: '13px', fontWeight: 800 }}>Issue Warning</span>
+                <span style={{ fontSize: '10px', color: '#64748b' }}>Deduct Trust</span>
               </button>
             </div>
           </div>
@@ -182,7 +186,7 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
           {/* If Suspend: Duration */}
           {actionType === 'SUSPEND' && (
             <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#09090b', marginBottom: '6px' }}>
                 Suspension Duration
               </label>
               <select
@@ -200,7 +204,7 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
 
           {/* Bad Practice Reason Preset */}
           <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#09090b', marginBottom: '6px' }}>
               Bad Practice Violation Reason
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -211,12 +215,14 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '10px',
-                    padding: '10px 12px',
+                    padding: '10px 14px',
                     borderRadius: '8px',
-                    background: selectedReason === reason ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-input)',
-                    border: `1px solid ${selectedReason === reason ? 'var(--primary)' : 'var(--border-subtle)'}`,
+                    background: selectedReason === reason ? '#ecfdf5' : '#ffffff',
+                    border: `1.5px solid ${selectedReason === reason ? '#10b981' : '#e2e8f0'}`,
                     cursor: 'pointer',
                     fontSize: '13px',
+                    fontWeight: selectedReason === reason ? 700 : 500,
+                    color: selectedReason === reason ? '#047857' : '#09090b',
                     transition: 'all 0.15s'
                   }}
                 >
@@ -225,7 +231,7 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
                     name="bad_practice_reason"
                     checked={selectedReason === reason}
                     onChange={() => setSelectedReason(reason)}
-                    style={{ marginTop: '2px', accentColor: 'var(--primary)' }}
+                    style={{ marginTop: '2px', accentColor: '#10b981' }}
                   />
                   <span>{reason}</span>
                 </label>
@@ -235,7 +241,7 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
 
           {/* Additional Notes */}
           <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#09090b', marginBottom: '6px' }}>
               Admin Moderation Notes & Incident Reference (Optional)
             </label>
             <textarea
@@ -245,13 +251,14 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
               onChange={(e) => setCustomNote(e.target.value)}
               style={{
                 width: '100%',
-                background: 'var(--bg-input)',
-                border: '1px solid var(--border-subtle)',
+                background: '#ffffff',
+                border: '1.5px solid #e2e8f0',
                 borderRadius: '8px',
-                color: 'var(--text-primary)',
-                padding: '10px 12px',
+                color: '#09090b',
+                padding: '10px 14px',
                 fontFamily: 'inherit',
                 fontSize: '13px',
+                fontWeight: 500,
                 outline: 'none',
                 resize: 'vertical'
               }}
@@ -265,7 +272,7 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
             Cancel
           </button>
           <button
-            className={`btn ${actionType === 'BLOCK' ? 'btn-danger' : actionType === 'SUSPEND' ? 'btn-warning' : 'btn-primary'}`}
+            className="btn btn-danger"
             onClick={handleApply}
           >
             {actionType === 'BLOCK' && <Ban size={16} />}

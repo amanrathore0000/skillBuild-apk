@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Large 10-inch+ tablets (smallest width >= 720dp) -->
+    <dimen name="splash_logo_width">420dp</dimen>
+    <dimen name="splash_logo_height">135dp</dimen>
+    <dimen name="splash_icon_size">200dp</dimen>
+    <dimen name="splash_v31_size">160dp</dimen>
+</resources>

@@ -26,6 +26,43 @@ class UserAccountRepository(context: Context) {
         }
     }
 
+    init {
+        // Seed default demo registered accounts if accounts list is empty,
+        // allowing immediate out-of-the-box testing for both Learner and Mentor roles.
+        val existing = getRegisteredAccounts()
+        if (existing.isEmpty()) {
+            val demoAccounts = listOf(
+                UserAccount(
+                    id = "mentor@skillbuilder.app",
+                    email = "mentor@skillbuilder.app",
+                    password = "password123",
+                    name = "Alex Vance (Mentor)",
+                    phone = "+1 555-0192",
+                    dob = "14/08/1990",
+                    location = "San Francisco, USA",
+                    skills = listOf("Jetpack Compose", "Kotlin Coroutines", "Cloud Architecture"),
+                    skillsWanted = listOf("Artisan Sourdough", "Acoustic Guitar"),
+                    isMentor = true,
+                    isGoogleUser = false
+                ),
+                UserAccount(
+                    id = "learner@skillbuilder.app",
+                    email = "learner@skillbuilder.app",
+                    password = "password123",
+                    name = "Jordan Lee (Learner)",
+                    phone = "+1 555-0144",
+                    dob = "22/03/1996",
+                    location = "Austin, USA",
+                    skills = listOf("Python Basics", "Graphic Design"),
+                    skillsWanted = listOf("Android Dev", "Jetpack Compose"),
+                    isMentor = false,
+                    isGoogleUser = false
+                )
+            )
+            saveAccounts(demoAccounts)
+        }
+    }
+
     @Synchronized
     fun getRegisteredAccounts(): List<UserAccount> {
         val raw = prefs.getString(KEY_ACCOUNTS, null) ?: return emptyList()
@@ -40,6 +77,32 @@ class UserAccountRepository(context: Context) {
     private fun saveAccounts(accounts: List<UserAccount>) {
         val raw = json.encodeToString(accounts)
         prefs.edit().putString(KEY_ACCOUNTS, raw).apply()
+    }
+
+    @Synchronized
+    fun isEmailRegistered(email: String): Boolean {
+        val normalized = email.trim().lowercase()
+        return getRegisteredAccounts().any { it.email.trim().lowercase() == normalized }
+    }
+
+    @Synchronized
+    fun getAccountByEmail(email: String): UserAccount? {
+        val normalized = email.trim().lowercase()
+        return getRegisteredAccounts().find { it.email.trim().lowercase() == normalized }
+    }
+
+    @Synchronized
+    fun updatePassword(email: String, newPassword: String): Result<Boolean> {
+        val normalized = email.trim().lowercase()
+        val accounts = getRegisteredAccounts().toMutableList()
+        val index = accounts.indexOfFirst { it.email.trim().lowercase() == normalized }
+        if (index < 0) {
+            return Result.failure(IllegalArgumentException("No registered account found for $normalized."))
+        }
+        val existing = accounts[index]
+        accounts[index] = existing.copy(password = newPassword)
+        saveAccounts(accounts)
+        return Result.success(true)
     }
 
     @Synchronized
@@ -82,20 +145,20 @@ class UserAccountRepository(context: Context) {
     }
 
     @Synchronized
-    fun loginWithGoogle(googleUser: GoogleUserData): Result<User> {
+    fun loginWithGoogle(googleUser: GoogleUserData, defaultIsMentor: Boolean = false): Result<User> {
         val normalizedEmail = googleUser.email.trim().lowercase()
         val accounts = getRegisteredAccounts().toMutableList()
         val index = accounts.indexOfFirst { it.email.trim().lowercase() == normalizedEmail }
 
         if (index < 0) {
-            return Result.failure(
-                IllegalArgumentException("No registered account found for $normalizedEmail. Please register first as a Mentor or Learner.")
-            )
+            // User tapped Google login for the first time: seamlessly create account and log in
+            return registerWithGoogle(googleUser, defaultIsMentor)
         }
 
         val existing = accounts[index]
         val updated = existing.copy(
             avatarUrl = googleUser.profilePictureUri ?: existing.avatarUrl,
+            name = if (existing.name.isNotBlank()) existing.name else (googleUser.displayName ?: existing.name),
             isGoogleUser = true
         )
         accounts[index] = updated
@@ -111,6 +174,21 @@ class UserAccountRepository(context: Context) {
         val accounts = getRegisteredAccounts().toMutableList()
         val index = accounts.indexOfFirst { it.email.trim().lowercase() == normalizedEmail }
 
+        if (index >= 0) {
+            // Already registered: log them in seamlessly and update role if specified
+            val existing = accounts[index]
+            val updated = existing.copy(
+                avatarUrl = googleUser.profilePictureUri ?: existing.avatarUrl,
+                isGoogleUser = true,
+                isMentor = if (defaultIsMentor) true else existing.isMentor
+            )
+            accounts[index] = updated
+            saveAccounts(accounts)
+            val user = updated.toUser()
+            setActiveUser(user)
+            return Result.success(user)
+        }
+
         val displayName = when {
             !googleUser.displayName.isNullOrBlank() -> googleUser.displayName
             !googleUser.givenName.isNullOrBlank() && !googleUser.familyName.isNullOrBlank() -> "${googleUser.givenName} ${googleUser.familyName}"
@@ -119,27 +197,18 @@ class UserAccountRepository(context: Context) {
                 .joinToString(" ") { part -> part.replaceFirstChar { it.uppercase() } }
         }
 
-        val userAccount = if (index >= 0) {
-            val existing = accounts[index]
-            existing.copy(
-                name = if (existing.name.isNotBlank()) existing.name else displayName,
-                avatarUrl = googleUser.profilePictureUri ?: existing.avatarUrl,
-                isGoogleUser = true
-            ).also { accounts[index] = it }
-        } else {
-            UserAccount(
-                id = normalizedEmail,
-                email = normalizedEmail,
-                name = displayName,
-                avatarUrl = googleUser.profilePictureUri,
-                phone = "",
-                dob = "",
-                location = "",
-                skills = emptyList(),
-                isMentor = defaultIsMentor,
-                isGoogleUser = true
-            ).also { accounts.add(it) }
-        }
+        val userAccount = UserAccount(
+            id = normalizedEmail,
+            email = normalizedEmail,
+            name = displayName,
+            avatarUrl = googleUser.profilePictureUri,
+            phone = "",
+            dob = "",
+            location = "",
+            skills = emptyList(),
+            isMentor = defaultIsMentor,
+            isGoogleUser = true
+        ).also { accounts.add(it) }
 
         saveAccounts(accounts)
         val user = userAccount.toUser()
@@ -149,7 +218,11 @@ class UserAccountRepository(context: Context) {
 
     @Synchronized
     fun loginOrRegisterGoogleUser(googleUser: GoogleUserData, defaultIsMentor: Boolean = false): User {
-        return registerWithGoogle(googleUser, defaultIsMentor).getOrThrow()
+        val result = loginWithGoogle(googleUser, defaultIsMentor)
+        return result.getOrElse {
+            val fallback = registerWithGoogle(googleUser, defaultIsMentor).getOrThrow()
+            fallback
+        }
     }
 
     @Synchronized
@@ -167,6 +240,7 @@ class UserAccountRepository(context: Context) {
                 location = updatedUser.location,
                 avatarUrl = updatedUser.avatarUrl ?: existing.avatarUrl,
                 skills = if (updatedUser.isMentor) updatedUser.skillsTaught else updatedUser.skillsWanted,
+                skillsWanted = updatedUser.skillsWanted,
                 isMentor = updatedUser.isMentor
             )
             saveAccounts(accounts)

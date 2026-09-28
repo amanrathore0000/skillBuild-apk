@@ -389,7 +389,8 @@ export class CoursesService {
         uploadUrl: `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable`,
         driveFolder: 'SkillBuilder Videos',
         driveFileId: `gdrive_${uploadId}`,
-        mediaUrl: `https://drive.google.com/file/d/gdrive_${uploadId}/view`,
+        mediaUrl: `https://drive.google.com/uc?export=download&id=gdrive_${uploadId}`,
+        viewUrl: `https://drive.google.com/file/d/gdrive_${uploadId}/view`,
         expiresIn: 3600,
       };
     }

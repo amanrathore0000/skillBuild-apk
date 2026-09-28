@@ -71,64 +71,10 @@ import com.skillbuilder.app.domain.model.MentorVideo
 fun BrowseVideosScreen(
     onOpenVideo: (MentorVideo) -> Unit = {}
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("All Videos", "My Courses")
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        // Sub-tabs: All Videos vs My Courses
-        ScrollableTabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.primary,
-            edgePadding = 16.dp,
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = MaterialTheme.colorScheme.primary
-                )
-            },
-            divider = {}
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (index == 0) Icons.Rounded.VideoLibrary else Icons.Rounded.School,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = title,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 14.sp
-                            )
-                        }
-                    },
-                    selectedContentColor = MaterialTheme.colorScheme.primary,
-                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        when (selectedTab) {
-            0 -> AllVideosTab(
-                onNavigateToMyCourses = { selectedTab = 1 },
-                onOpenVideo = onOpenVideo
-            )
-            1 -> LearnScreen(
-                onExploreCourses = { selectedTab = 0 },
-                onOpenVideo = onOpenVideo
-            )
-        }
-    }
+    LearnScreen(
+        onExploreCourses = null,
+        onOpenVideo = onOpenVideo
+    )
 }
 
 @Composable
@@ -362,8 +308,8 @@ private fun YouTubeVideoFeedCard(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(
-            width = if (isEnrolled) 1.5.dp else 1.dp,
-            color = if (isEnrolled) Color(0xFF10B981).copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline
         )
     ) {
         Column {
@@ -388,15 +334,12 @@ private fun YouTubeVideoFeedCard(
                         .align(Alignment.TopStart)
                         .padding(10.dp),
                     shape = RoundedCornerShape(6.dp),
-                    color = if (video.price == "Free")
-                        Color(0xFF10B981).copy(alpha = 0.92f)
-                    else
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.92f)
+                    color = MaterialTheme.colorScheme.primary
                 ) {
                     Text(
                         text = if (video.price == "Free") "FREE" else video.price,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         fontWeight = FontWeight.ExtraBold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
@@ -408,7 +351,7 @@ private fun YouTubeVideoFeedCard(
                         .align(Alignment.TopEnd)
                         .padding(10.dp),
                     shape = RoundedCornerShape(6.dp),
-                    color = if (isEnrolled) Color(0xFF10B981).copy(alpha = 0.92f) else Color(0xFFF59E0B).copy(alpha = 0.92f)
+                    color = if (isEnrolled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
@@ -417,14 +360,14 @@ private fun YouTubeVideoFeedCard(
                         Icon(
                             imageVector = if (isEnrolled) Icons.Rounded.CheckCircle else Icons.Rounded.PlayArrow,
                             contentDescription = null,
-                            tint = if (isEnrolled) Color.White else Color.Black,
+                            tint = if (isEnrolled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondary,
                             modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = if (isEnrolled) "ENROLLED" else "30s FREE TRIAL",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = if (isEnrolled) Color.White else Color.Black,
+                            color = if (isEnrolled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondary,
                             fontWeight = FontWeight.ExtraBold
                         )
                     }
@@ -436,7 +379,7 @@ private fun YouTubeVideoFeedCard(
                         .align(Alignment.BottomEnd)
                         .padding(10.dp),
                     shape = RoundedCornerShape(6.dp),
-                    color = Color.Black.copy(alpha = 0.78f)
+                    color = Color(0xFF2B2B2B).copy(alpha = 0.78f)
                 ) {
                     Text(
                         text = video.duration,
@@ -453,12 +396,12 @@ private fun YouTubeVideoFeedCard(
                         .align(Alignment.BottomStart)
                         .padding(10.dp),
                     shape = RoundedCornerShape(6.dp),
-                    color = if (video.storageProvider == "GOOGLE_DRIVE") Color(0xFF0F9D58).copy(alpha = 0.85f) else Color(0xFF1976D2).copy(alpha = 0.85f)
+                    color = MaterialTheme.colorScheme.secondary
                 ) {
                     Text(
                         text = if (video.storageProvider == "GOOGLE_DRIVE") "Google Drive" else "AWS S3 Cloud",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSecondary,
                         modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                     )
                 }
@@ -469,7 +412,7 @@ private fun YouTubeVideoFeedCard(
                         .align(Alignment.Center)
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.45f)),
+                        .background(Color(0xFF2B2B2B).copy(alpha = 0.45f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

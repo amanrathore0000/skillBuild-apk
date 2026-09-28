@@ -1,35 +1,30 @@
-import React from 'react';
 import {
-  LayoutDashboard,
   Users,
-  Video,
-  AlertTriangle,
-  FileText,
+  LifeBuoy,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  ShieldCheck,
+  LogOut
 } from 'lucide-react';
 
 interface SidebarProps {
   currentTab: string;
   onSelectTab: (tab: string) => void;
-  pendingReportsCount: number;
+  pendingComplaintsCount: number;
   blockedUsersCount: number;
   onResetData: () => void;
+  onLogout?: () => void;
 }
 
 export const AdminSidebar: React.FC<SidebarProps> = ({
   currentTab,
   onSelectTab,
-  pendingReportsCount,
+  pendingComplaintsCount,
   blockedUsersCount,
-  onResetData
+  onResetData,
+  onLogout
 }) => {
   const navItems = [
-    {
-      id: 'overview',
-      label: 'Dashboard Overview',
-      icon: LayoutDashboard,
-    },
     {
       id: 'users',
       label: 'User Management',
@@ -38,90 +33,95 @@ export const AdminSidebar: React.FC<SidebarProps> = ({
       badgeType: 'danger'
     },
     {
-      id: 'uploads',
-      label: 'Uploaded Content',
-      icon: Video,
-    },
-    {
-      id: 'reports',
-      label: 'Bad Practice Reports',
-      icon: AlertTriangle,
-      badge: pendingReportsCount > 0 ? `${pendingReportsCount} Alert` : undefined,
-      badgeType: 'warning'
-    },
-    {
-      id: 'audit',
-      label: 'Admin Audit Logs',
-      icon: FileText,
+      id: 'support',
+      label: 'Help & Support',
+      icon: LifeBuoy,
+      badge: pendingComplaintsCount > 0 ? `${pendingComplaintsCount} New` : undefined,
+      badgeType: 'danger'
     },
   ];
 
   return (
-    <aside style={{
-      width: 'var(--sidebar-width)',
-      height: '100vh',
-      position: 'fixed',
-      left: 0,
-      top: 0,
-      backgroundColor: 'var(--bg-secondary)',
-      borderRight: '1px solid var(--border-subtle)',
-      display: 'flex',
-      flexDirection: 'column',
-      zIndex: 50
-    }}>
-      {/* Brand Header */}
-      <div style={{
-        padding: '24px 20px',
-        borderBottom: '1px solid var(--border-subtle)',
+    <aside
+      style={{
+        width: 'var(--sidebar-width)',
+        height: '100vh',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        backgroundColor: '#ffffff',
+        borderRight: '1px solid #e2e8f0',
         display: 'flex',
-        alignItems: 'center',
-        gap: '12px'
-      }}>
-        <div style={{
-          width: '42px',
-          height: '42px',
-          borderRadius: '12px',
-          background: '#111113',
+        flexDirection: 'column',
+        zIndex: 50,
+        boxShadow: '2px 0 12px rgba(0, 0, 0, 0.03)'
+      }}
+    >
+      {/* Brand Header */}
+      <div
+        style={{
+          padding: '22px 20px',
+          borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 14px rgba(239, 68, 68, 0.25)',
-          overflow: 'hidden'
-        }}>
-          <img
-            src="/logo.png"
-            alt="SkillBuilder"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
+          gap: '12px',
+          backgroundColor: '#ffffff'
+        }}
+      >
+        <div
+          style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
+            background: '#09090b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden'
+          }}
+        >
+          <ShieldCheck size={24} color="#10b981" />
         </div>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '-0.3px' }}>SkillBuilder</span>
-            <span style={{
-              background: 'rgba(99, 102, 241, 0.15)',
-              color: 'var(--primary-light)',
-              fontSize: '10px',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              fontWeight: 800
-            }}>ADMIN</span>
+            <span style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '-0.3px', color: '#09090b' }}>
+              SkillBuilder
+            </span>
+            <span
+              style={{
+                background: '#ecfdf5',
+                color: '#047857',
+                border: '1px solid #a7f3d0',
+                fontSize: '10px',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                fontWeight: 800
+              }}
+            >
+              ADMIN
+            </span>
           </div>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Governance & Safety Hub</p>
+          <p style={{ fontSize: '12px', color: '#64748b', fontWeight: 500, margin: 0 }}>
+            Users & Support Portal
+          </p>
         </div>
       </div>
 
       {/* Navigation */}
       <div style={{ padding: '20px 14px', flex: 1, overflowY: 'auto' }}>
-        <p style={{
-          fontSize: '11px',
-          fontWeight: 700,
-          color: 'var(--text-muted)',
-          letterSpacing: '1px',
-          padding: '0 10px 10px'
-        }}>
-          MANAGEMENT CONSOLE
+        <p
+          style={{
+            fontSize: '11px',
+            fontWeight: 800,
+            color: '#64748b',
+            letterSpacing: '1px',
+            padding: '0 10px 10px'
+          }}
+        >
+          CONSOLE NAVIGATION
         </p>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {navItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = currentTab === item.id;
@@ -134,25 +134,37 @@ export const AdminSidebar: React.FC<SidebarProps> = ({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   width: '100%',
-                  padding: '11px 14px',
+                  padding: '12px 14px',
                   borderRadius: '10px',
                   border: 'none',
-                  background: isActive ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(99, 102, 241, 0.06))' : 'transparent',
-                  color: isActive ? 'var(--primary-light)' : 'var(--text-secondary)',
+                  background: isActive ? '#ecfdf5' : 'transparent',
+                  color: isActive ? '#047857' : '#334155',
                   cursor: 'pointer',
-                  fontWeight: isActive ? 700 : 500,
+                  fontWeight: isActive ? 800 : 600,
                   fontSize: '14px',
-                  borderLeft: isActive ? '3px solid var(--primary)' : '3px solid transparent',
-                  transition: 'all 0.2s ease',
+                  borderLeft: isActive ? '4px solid #10b981' : '4px solid transparent',
+                  boxShadow: isActive ? '0 2px 8px rgba(16, 185, 129, 0.12)' : 'none',
+                  transition: 'all 0.15s ease',
                   textAlign: 'left'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <IconComponent size={18} color={isActive ? 'var(--primary-light)' : 'currentColor'} />
+                  <IconComponent size={19} color={isActive ? '#10b981' : '#64748b'} />
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
-                  <span className={`badge badge-${item.badgeType}`} style={{ fontSize: '10px', padding: '2px 7px' }}>
+                  <span
+                    className={`badge badge-${item.badgeType}`}
+                    style={{
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      backgroundColor: '#fef2f2',
+                      color: '#ef4444',
+                      border: '1px solid #fecaca',
+                      fontWeight: 800
+                    }}
+                  >
                     {item.badge}
                   </span>
                 )}
@@ -161,64 +173,98 @@ export const AdminSidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-        <div style={{ marginTop: '28px', padding: '0 10px' }}>
-          <p style={{
-            fontSize: '11px',
-            fontWeight: 700,
-            color: 'var(--text-muted)',
-            letterSpacing: '1px',
-            marginBottom: '10px'
-          }}>
-            QUICK CONTROLS
+        <div style={{ marginTop: '36px', padding: '0 10px' }}>
+          <p
+            style={{
+              fontSize: '11px',
+              fontWeight: 800,
+              color: '#64748b',
+              letterSpacing: '1px',
+              marginBottom: '10px'
+            }}
+          >
+            DATA CONTROLS
           </p>
           <button
             onClick={() => {
-              if (window.confirm('Reset all demo moderation data and test accounts?')) {
+              if (window.confirm('Reset all demo moderation data and complaints?')) {
                 onResetData();
               }
             }}
             className="btn btn-outline"
-            style={{ width: '100%', fontSize: '12px', padding: '8px 12px' }}
+            style={{ width: '100%', fontSize: '12px', padding: '9px 12px', justifyContent: 'center' }}
           >
-            <RotateCcw size={14} />
+            <RotateCcw size={14} color="#64748b" />
             Reset Demo Data
           </button>
         </div>
       </div>
 
       {/* Admin User Footer */}
-      <div style={{
-        padding: '16px 20px',
-        borderTop: '1px solid var(--border-subtle)',
-        background: 'rgba(0, 0, 0, 0.2)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px'
-      }}>
+      <div
+        style={{
+          padding: '16px 20px',
+          borderTop: '1px solid #e2e8f0',
+          background: '#f8fafc',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}
+      >
         <div style={{ position: 'relative' }}>
           <img
             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120"
             alt="Admin"
-            style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
+            style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #e2e8f0' }}
           />
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--success)',
-            border: '2px solid var(--bg-secondary)'
-          }} />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              backgroundColor: '#10b981',
+              border: '2px solid #ffffff'
+            }}
+          />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Super Admin</span>
-            <Sparkles size={12} color="var(--warning)" />
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#09090b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              Super Admin
+            </span>
+            <Sparkles size={12} color="#10b981" />
           </div>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>admin@skillbuilder.io</p>
+          <p style={{ fontSize: '11px', color: '#64748b', fontWeight: 500, margin: 0 }}>
+            admin@skillbuilder.io
+          </p>
         </div>
+
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            title="Log Out of Admin Panel"
+            style={{
+              background: 'none',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '7px',
+              cursor: 'pointer',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#ffffff',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+          >
+            <LogOut size={16} />
+          </button>
+        )}
       </div>
     </aside>
   );

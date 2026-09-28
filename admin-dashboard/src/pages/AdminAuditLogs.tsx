@@ -1,6 +1,6 @@
 import React from 'react';
 import { AuditLogEntry } from '../types/admin';
-import { FileText, ShieldAlert, CheckCircle, Ban, AlertTriangle } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 interface AuditLogsProps {
   logs: AuditLogEntry[];
@@ -9,30 +9,31 @@ interface AuditLogsProps {
 export const AdminAuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
   return (
     <div>
-      <div className="glass-card" style={{ padding: '20px 24px', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="glass-card" style={{ padding: '20px 24px', marginBottom: '24px', backgroundColor: '#ffffff', borderTop: '4px solid #10b981' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
-            background: 'rgba(99, 102, 241, 0.15)',
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
+            background: '#ecfdf5',
+            border: '1.5px solid #a7f3d0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--primary)'
+            color: '#10b981'
           }}>
-            <FileText size={22} />
+            <FileText size={24} />
           </div>
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800 }}>Administrative Moderation Audit Trail</h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#09090b' }}>Administrative Moderation Audit Trail</h3>
+            <p style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>
               Immutable record of all enforcement actions, account bans, content takedowns, and warnings.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="glass-card" style={{ overflow: 'hidden' }}>
+      <div className="glass-card" style={{ overflow: 'hidden', backgroundColor: '#ffffff' }}>
         <div className="table-wrapper">
           <table className="admin-table">
             <thead>
@@ -46,34 +47,31 @@ export const AdminAuditLogs: React.FC<AuditLogsProps> = ({ logs }) => {
             </thead>
             <tbody>
               {logs.map(log => {
-                const isDanger = log.severity === 'DANGER';
-                const isWarning = log.severity === 'WARNING';
-                const isSuccess = log.severity === 'SUCCESS';
+                const isDanger = log.severity === 'DANGER' || log.severity === 'WARNING';
 
                 return (
                   <tr key={log.id}>
-                    <td style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    <td style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap', fontWeight: 500 }}>
                       {log.timestamp}
                     </td>
 
                     <td>
-                      <span style={{ fontWeight: 700, fontSize: '13px' }}>{log.adminName}</span>
+                      <span style={{ fontWeight: 800, fontSize: '13px', color: '#09090b' }}>{log.adminName}</span>
                     </td>
 
                     <td>
-                      <span className={`badge badge-${isDanger ? 'blocked' : isWarning ? 'warned' : 'active'}`}>
-                        {log.action === 'USER_BLOCKED' && <Ban size={11} />}
-                        {log.action === 'USER_WARNED' && <AlertTriangle size={11} />}
-                        {log.action === 'REPORT_RESOLVED' && <CheckCircle size={11} />}
-                        {log.action.replace(/_/g, ' ')}
+                      <span className={`badge badge-${isDanger ? 'danger' : 'active'}`} style={{ fontSize: '10px' }}>
+                        {log.action}
                       </span>
                     </td>
 
                     <td>
-                      <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{log.target}</strong>
+                      <span style={{ fontWeight: 700, fontSize: '13px', color: '#09090b' }}>
+                        {log.target}
+                      </span>
                     </td>
 
-                    <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    <td style={{ fontSize: '13px', color: '#334155', fontWeight: 500 }}>
                       {log.details}
                     </td>
                   </tr>

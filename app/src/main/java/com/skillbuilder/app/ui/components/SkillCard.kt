@@ -113,7 +113,7 @@ fun SkillCard(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "${skill.mentorCount} mentors available for swap",
+                    text = "${skill.mentorCount} mentors available",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

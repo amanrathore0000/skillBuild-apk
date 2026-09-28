@@ -4,12 +4,10 @@ import {
   Video,
   BookOpen,
   Search,
-  Filter,
   Play,
   AlertTriangle,
   CheckCircle,
   Trash2,
-  Clock,
   Eye,
   ThumbsUp
 } from 'lucide-react';
@@ -58,7 +56,7 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
       <div className="glass-card" style={{ padding: '20px 24px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           {/* Sub-tabs: Video Lessons vs Courses */}
-          <div style={{ display: 'flex', background: 'var(--bg-input)', padding: '4px', borderRadius: '10px' }}>
+          <div style={{ display: 'flex', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '4px', borderRadius: '10px' }}>
             <button
               onClick={() => setContentType('VIDEOS')}
               style={{
@@ -68,15 +66,15 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                 padding: '8px 18px',
                 borderRadius: '8px',
                 border: 'none',
-                background: contentType === 'VIDEOS' ? 'var(--primary)' : 'transparent',
-                color: contentType === 'VIDEOS' ? '#fff' : 'var(--text-secondary)',
-                fontWeight: 700,
+                background: contentType === 'VIDEOS' ? '#09090b' : 'transparent',
+                color: contentType === 'VIDEOS' ? '#ffffff' : '#475569',
+                fontWeight: 800,
                 fontSize: '13px',
                 cursor: 'pointer',
                 transition: 'all 0.15s'
               }}
             >
-              <Video size={16} />
+              <Video size={16} color={contentType === 'VIDEOS' ? '#10b981' : 'currentColor'} />
               Uploaded Videos ({videos.length})
             </button>
 
@@ -89,15 +87,15 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                 padding: '8px 18px',
                 borderRadius: '8px',
                 border: 'none',
-                background: contentType === 'COURSES' ? 'var(--primary)' : 'transparent',
-                color: contentType === 'COURSES' ? '#fff' : 'var(--text-secondary)',
-                fontWeight: 700,
+                background: contentType === 'COURSES' ? '#09090b' : 'transparent',
+                color: contentType === 'COURSES' ? '#ffffff' : '#475569',
+                fontWeight: 800,
                 fontSize: '13px',
                 cursor: 'pointer',
                 transition: 'all 0.15s'
               }}
             >
-              <BookOpen size={16} />
+              <BookOpen size={16} color={contentType === 'COURSES' ? '#10b981' : 'currentColor'} />
               Courses on Server ({courses.length})
             </button>
           </div>
@@ -139,7 +137,8 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                border: video.flaggedForBadPractice ? '1px solid rgba(239, 68, 68, 0.4)' : undefined
+                backgroundColor: '#ffffff',
+                border: video.flaggedForBadPractice ? '1.5px solid #fecaca' : '1px solid #e2e8f0'
               }}
             >
               {/* Thumbnail Container */}
@@ -149,7 +148,7 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                   width: '100%',
                   aspectRatio: '16/9',
                   cursor: 'pointer',
-                  backgroundColor: '#000'
+                  backgroundColor: '#09090b'
                 }}
                 onClick={() => onInspectVideo(video)}
               >
@@ -164,19 +163,19 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                   position: 'absolute',
                   bottom: '8px',
                   right: '8px',
-                  background: 'rgba(0, 0, 0, 0.8)',
-                  padding: '3px 7px',
+                  background: 'rgba(9, 9, 11, 0.85)',
+                  padding: '3px 8px',
                   borderRadius: '4px',
                   fontSize: '11px',
-                  fontWeight: 700,
-                  color: '#fff'
+                  fontWeight: 800,
+                  color: '#ffffff'
                 }}>
                   {video.duration}
                 </span>
 
                 {/* Status Badge Top Left */}
                 <div style={{ position: 'absolute', top: '8px', left: '8px' }}>
-                  <span className={`badge badge-${video.status === 'APPROVED' ? 'active' : video.status === 'FLAGGED' ? 'warned' : 'blocked'}`}>
+                  <span className={`badge badge-${video.status === 'APPROVED' ? 'active' : 'danger'}`}>
                     {video.status}
                   </span>
                 </div>
@@ -189,35 +188,35 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: 'rgba(0, 0, 0, 0.25)',
-                  opacity: 0.85,
+                  opacity: 0.9,
                   transition: 'opacity 0.2s'
                 }}>
                   <div style={{
                     width: '46px',
                     height: '46px',
                     borderRadius: '50%',
-                    background: 'rgba(99, 102, 241, 0.85)',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 4px 14px rgba(0,0,0,0.5)'
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.5)'
                   }}>
-                    <Play size={20} color="#fff" style={{ marginLeft: '2px' }} />
+                    <Play size={20} color="#ffffff" style={{ marginLeft: '2px' }} />
                   </div>
                 </div>
               </div>
 
               {/* Card Body */}
-              <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary-light)', textTransform: 'uppercase' }}>
+              <div style={{ padding: '18px', flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   {video.category}
                 </span>
                 <h4 style={{
                   fontSize: '15px',
-                  fontWeight: 700,
+                  fontWeight: 800,
                   marginTop: '4px',
                   lineHeight: '1.4',
-                  color: 'var(--text-primary)',
+                  color: '#09090b',
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
@@ -226,18 +225,20 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                   {video.title}
                 </h4>
 
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', fontWeight: 500 }}>
                   Course: {video.courseTitle}
                 </p>
 
                 {video.flaggedForBadPractice && (
                   <div style={{
                     marginTop: '10px',
-                    padding: '8px 10px',
+                    padding: '8px 12px',
                     borderRadius: '6px',
-                    background: 'rgba(239, 68, 68, 0.12)',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
                     fontSize: '11px',
-                    color: '#fca5a5'
+                    fontWeight: 600,
+                    color: '#b91c1c'
                   }}>
                     ⚠ {video.flagReason}
                   </div>
@@ -249,30 +250,30 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   marginTop: 'auto',
-                  paddingTop: '12px',
-                  borderTop: '1px solid var(--border-subtle)',
+                  paddingTop: '14px',
+                  borderTop: '1px solid #f1f5f9',
                   fontSize: '12px',
-                  color: 'var(--text-secondary)'
+                  color: '#334155'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <img src={video.mentorAvatar} alt={video.mentorName} style={{ width: '22px', height: '22px', borderRadius: '50%' }} />
-                    <span style={{ fontWeight: 600 }}>{video.mentorName}</span>
+                    <img src={video.mentorAvatar} alt={video.mentorName} style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #e2e8f0' }} />
+                    <span style={{ fontWeight: 700, color: '#09090b' }}>{video.mentorName}</span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <span><Eye size={12} style={{ verticalAlign: 'middle' }} /> {video.views}</span>
-                    <span><ThumbsUp size={12} style={{ verticalAlign: 'middle' }} /> {video.likes}</span>
+                  <div style={{ display: 'flex', gap: '10px', color: '#64748b', fontWeight: 600 }}>
+                    <span><Eye size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} /> {video.views}</span>
+                    <span><ThumbsUp size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} /> {video.likes}</span>
                   </div>
                 </div>
 
                 {/* Moderation Action Buttons */}
-                <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
                   <button
                     className="btn btn-outline btn-sm"
                     style={{ flex: 1 }}
                     onClick={() => onInspectVideo(video)}
                   >
-                    <Play size={13} />
+                    <Play size={13} color="#09090b" />
                     Inspect Player
                   </button>
 
@@ -283,16 +284,18 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                       onClick={() => onApproveVideo(video)}
                     >
                       <CheckCircle size={13} />
+                      Approve
                     </button>
                   )}
 
                   {video.status !== 'FLAGGED' && (
                     <button
-                      className="btn btn-warning btn-sm"
+                      className="btn btn-danger btn-sm"
                       title="Flag as Bad Practice"
                       onClick={() => onFlagVideo(video)}
                     >
                       <AlertTriangle size={13} />
+                      Flag
                     </button>
                   )}
 
@@ -300,6 +303,7 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                     className="btn btn-danger btn-sm"
                     title="Remove Video"
                     onClick={() => onRemoveVideo(video)}
+                    style={{ padding: '6px 10px' }}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -314,11 +318,11 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
       {contentType === 'COURSES' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '22px' }}>
           {filteredCourses.map(course => (
-            <div key={course.id} className="glass-card" style={{ overflow: 'hidden' }}>
+            <div key={course.id} className="glass-card" style={{ overflow: 'hidden', backgroundColor: '#ffffff' }}>
               <div style={{ position: 'relative', width: '100%', height: '160px' }}>
                 <img src={course.thumbnailUrl} alt={course.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', top: '10px', left: '10px' }}>
-                  <span className={`badge badge-${course.status === 'APPROVED' ? 'active' : 'warned'}`}>
+                  <span className={`badge badge-${course.status === 'APPROVED' ? 'active' : 'danger'}`}>
                     {course.status}
                   </span>
                 </div>
@@ -326,33 +330,36 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                   position: 'absolute',
                   top: '10px',
                   right: '10px',
-                  background: 'var(--primary)',
-                  color: '#fff',
+                  background: '#10b981',
+                  color: '#ffffff',
                   fontWeight: 800,
                   fontSize: '12px',
-                  padding: '3px 8px',
-                  borderRadius: '6px'
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)'
                 }}>
                   {course.price}
                 </div>
               </div>
 
-              <div style={{ padding: '18px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary-light)' }}>
+              <div style={{ padding: '18px', backgroundColor: '#ffffff' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#10b981', letterSpacing: '0.5px' }}>
                   {course.category}
                 </span>
-                <h4 style={{ fontSize: '16px', fontWeight: 800, marginTop: '4px', color: 'var(--text-primary)' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: 800, marginTop: '4px', color: '#09090b' }}>
                   {course.title}
                 </h4>
 
                 {course.flagReason && (
                   <div style={{
                     marginTop: '8px',
-                    padding: '8px',
+                    padding: '8px 12px',
                     borderRadius: '6px',
-                    background: 'rgba(239, 68, 68, 0.12)',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
                     fontSize: '12px',
-                    color: '#fca5a5'
+                    fontWeight: 600,
+                    color: '#b91c1c'
                   }}>
                     ⚠ {course.flagReason}
                   </div>
@@ -363,14 +370,16 @@ export const UploadedContent: React.FC<UploadedContentProps> = ({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   marginTop: '16px',
+                  paddingTop: '12px',
+                  borderTop: '1px solid #f1f5f9',
                   fontSize: '12px',
-                  color: 'var(--text-secondary)'
+                  color: '#475569'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <img src={course.mentorAvatar} alt={course.mentorName} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
-                    <span>{course.mentorName}</span>
+                    <img src={course.mentorAvatar} alt={course.mentorName} style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #e2e8f0' }} />
+                    <span style={{ fontWeight: 700, color: '#09090b' }}>{course.mentorName}</span>
                   </div>
-                  <span>{course.lessonsCount} Lessons • {course.duration}</span>
+                  <span style={{ fontWeight: 600 }}>{course.lessonsCount} Lessons • {course.duration}</span>
                 </div>
               </div>
             </div>

@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import com.skillbuilder.app.domain.model.SupportTicket
 import com.skillbuilder.app.domain.model.Course
 import com.skillbuilder.app.domain.model.Lesson
 import com.skillbuilder.app.domain.model.MentorStats
@@ -79,7 +81,8 @@ object SampleData {
             isVerified = true,
             skillsTaught = listOf("Artisan Cake Baking", "French Pastry"),
             skillsWanted = listOf("Acoustic Guitar", "Music Theory"),
-            isMentor = true
+            isMentor = true,
+            hasActiveSwapPremium = true
         ),
         User(
             id = "user_rohan",
@@ -91,7 +94,8 @@ object SampleData {
             isVerified = true,
             skillsTaught = listOf("UI/UX Design", "Figma Prototyping"),
             skillsWanted = listOf("Acoustic Guitar"),
-            isMentor = true
+            isMentor = true,
+            hasActiveSwapPremium = true
         ),
         User(
             id = "user_priya",
@@ -103,7 +107,8 @@ object SampleData {
             isVerified = true,
             skillsTaught = listOf("Conversational Spanish", "Spanish Pronunciation"),
             skillsWanted = listOf("Acoustic Guitar"),
-            isMentor = true
+            isMentor = true,
+            hasActiveSwapPremium = true
         ),
         User(
             id = "user_kavya",
@@ -115,7 +120,8 @@ object SampleData {
             isVerified = true,
             skillsTaught = listOf("Ceramic Hand-Building Pottery", "Glazing Essentials"),
             skillsWanted = listOf("Sourdough Baking"),
-            isMentor = true
+            isMentor = true,
+            hasActiveSwapPremium = true
         )
     )
 
@@ -190,6 +196,15 @@ object SampleData {
     val swapProposals: List<SwapProposal>
         get() = RealTimeDataManager.swapProposalsFlow.value
 
+    val mentorSwapPassActiveFlow: StateFlow<Boolean>
+        get() = RealTimeDataManager.mentorSwapPassActive
+
+    fun purchaseMentorSwapPass(): Boolean = RealTimeDataManager.purchaseMentorSwapPass()
+
+    fun consumeMentorSwapPass(): Boolean = RealTimeDataManager.consumeMentorSwapPass()
+
+    fun hasActiveMentorSwapPass(): Boolean = RealTimeDataManager.hasActiveMentorSwapPass()
+
     fun addSwapProposal(proposal: SwapProposal) {
         RealTimeDataManager.addSwapProposal(proposal)
     }
@@ -224,7 +239,10 @@ object SampleData {
         text: String,
         type: ChatMessageType = ChatMessageType.STANDARD,
         referenceTopic: String? = null,
-        referenceCourseId: String? = null
+        referenceCourseId: String? = null,
+        attachmentUri: String? = null,
+        attachmentType: String? = null,
+        attachmentName: String? = null
     ): ChatMessage {
         val newMsg = ChatMessage(
             id = "msg_${System.currentTimeMillis()}",
@@ -241,10 +259,21 @@ object SampleData {
             status = "Delivered",
             isEncrypted = true,
             isResolved = false,
-            isAccepted = false
+            isAccepted = false,
+            attachmentUri = attachmentUri,
+            attachmentType = attachmentType,
+            attachmentName = attachmentName
         )
         RealTimeDataManager.sendChatMessage(newMsg)
         return newMsg
+    }
+
+    fun deleteChatMessage(conversationId: String, messageId: String) {
+        RealTimeDataManager.deleteChatMessage(conversationId, messageId)
+    }
+
+    fun unsendChatMessage(conversationId: String, messageId: String) {
+        RealTimeDataManager.unsendChatMessage(conversationId, messageId)
     }
 
     fun markDoubtResolved(messageId: String) {
@@ -300,7 +329,7 @@ object SampleData {
             senderName = learnerName,
             senderRole = "Learner",
             recipientId = mentorId,
-            text = "Hello! Looking forward to learning and skill swapping with you.",
+            text = "Hello! Looking forward to learning from you.",
             timestamp = "Just now",
             type = ChatMessageType.STANDARD,
             status = "Delivered"
@@ -311,15 +340,67 @@ object SampleData {
 
     // ==================== Real Wallet & Stats ====================
 
+    private val defaultSeedTransactions = listOf(
+        WalletTransaction(
+            id = "tx_seed_1",
+            title = "Course Enrollment: Acoustic Fingerstyle",
+            subtitle = "Learner: Rahul Saxena · Razorpay UPI",
+            amount = "+₹2,499",
+            date = "Today, 4:15 PM",
+            isCredit = true
+        ),
+        WalletTransaction(
+            id = "tx_seed_2",
+            title = "Live Workshop Royalty",
+            subtitle = "12 attendees · Group Masterclass Session",
+            amount = "+₹5,800",
+            date = "Yesterday",
+            isCredit = true
+        ),
+        WalletTransaction(
+            id = "tx_seed_3",
+            title = "Payout to Bank (HDFC •••• 4021)",
+            subtitle = "IMPS Instant Transfer · Ref #IMPS99214",
+            amount = "-₹10,000",
+            date = "24 Sep",
+            isCredit = false
+        ),
+        WalletTransaction(
+            id = "tx_seed_4",
+            title = "Course Sale: Compose Design Tokens",
+            subtitle = "Learner: Priya Sharma · Card",
+            amount = "+₹1,999",
+            date = "22 Sep",
+            isCredit = true
+        ),
+        WalletTransaction(
+            id = "tx_seed_5",
+            title = "Top Educator Incentive Bonus",
+            subtitle = "Platform Creator Royalty Pool Tier 1",
+            amount = "+₹4,500",
+            date = "20 Sep",
+            isCredit = true
+        )
+    )
+
     val mentorWallet: MentorWallet
         get() {
-            val txs = RealTimeDataManager.transactionsFlow.value
+            val userTxs = RealTimeDataManager.transactionsFlow.value
+            val allTxs = if (userTxs.isEmpty()) defaultSeedTransactions else userTxs + defaultSeedTransactions.filter { seed -> userTxs.none { it.id == seed.id } }
+
+            var netBalance = 38400
+            for (tx in userTxs) {
+                val num = tx.amount.replace("+", "").replace("-", "").replace("₹", "").replace(",", "").trim().toIntOrNull() ?: 0
+                if (tx.isCredit) netBalance += num else netBalance -= num
+            }
+            if (netBalance < 0) netBalance = 0
+
             return MentorWallet(
-                balance = "₹0",
-                pendingPayout = "₹0",
-                totalEarned = "₹0",
-                monthlyRevenue = "₹0",
-                transactions = txs
+                balance = "₹" + String.format("%,d", netBalance),
+                pendingPayout = "₹2,800",
+                totalEarned = "₹72,900",
+                monthlyRevenue = "₹18,400",
+                transactions = allTxs
             )
         }
 
@@ -333,4 +414,73 @@ object SampleData {
                 averageRating = 5.0f
             )
         }
+
+    // ==================== Real Help & Support Tickets ====================
+    private val _userSupportTicketsFlow = MutableStateFlow<List<SupportTicket>>(
+        listOf(
+            SupportTicket(
+                id = "TKT-1082",
+                userId = currentUser.id,
+                userName = currentUser.name,
+                userEmail = currentUser.email,
+                userRole = if (currentUser.isMentor) "MENTOR" else "LEARNER",
+                categoryId = "PAYMENT_ISSUE",
+                categoryTitle = "Payment & 30-Day Refund Guarantee",
+                subject = "Billing confirmation for Advanced Masterclass",
+                description = "Enrolled in course yesterday. Requesting digital GST invoice and confirmation of receipt.",
+                courseName = "Acoustic Fingerstyle Masterclass",
+                orderId = "TXN-GTR-8821",
+                priority = "MEDIUM",
+                status = "RESOLVED",
+                createdAt = "Sep 20, 2026",
+                adminResponse = "Invoice generated and forwarded to your registered email address."
+            )
+        )
+    )
+    val userSupportTicketsFlow: StateFlow<List<SupportTicket>> = _userSupportTicketsFlow.asStateFlow()
+
+    fun submitSupportTicket(ticket: SupportTicket) {
+        _userSupportTicketsFlow.value = listOf(ticket) + _userSupportTicketsFlow.value
+
+        // Asynchronously dispatch to backend Express server
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            try {
+                val jsonBody = org.json.JSONObject().apply {
+                    put("userId", ticket.userId)
+                    put("userName", ticket.userName)
+                    put("userEmail", ticket.userEmail)
+                    put("userPhone", ticket.userPhone)
+                    put("userRole", ticket.userRole)
+                    put("category", ticket.categoryId)
+                    put("subject", ticket.subject)
+                    put("description", ticket.description)
+                    put("priority", ticket.priority)
+                }.toString()
+
+                val endpoints = listOf(
+                    "http://10.0.2.2:5000/api/v1/support/complaints",
+                    "http://127.0.0.1:5000/api/v1/support/complaints"
+                )
+                for (urlStr in endpoints) {
+                    try {
+                        val url = java.net.URL(urlStr)
+                        val conn = url.openConnection() as java.net.HttpURLConnection
+                        conn.requestMethod = "POST"
+                        conn.setRequestProperty("Content-Type", "application/json")
+                        conn.connectTimeout = 3000
+                        conn.readTimeout = 3000
+                        conn.doOutput = true
+                        conn.outputStream.use { os ->
+                            os.write(jsonBody.toByteArray(java.nio.charset.StandardCharsets.UTF_8))
+                        }
+                        val code = conn.responseCode
+                        if (code in 200..299) {
+                            break
+                        }
+                    } catch (_: Exception) { }
+                }
+            } catch (_: Exception) { }
+        }
+    }
 }
+

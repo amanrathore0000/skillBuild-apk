@@ -11,8 +11,10 @@ export class CoursesService {
         }
         if (query.search) {
             where.OR = [
-                { title: { contains: query.search } },
-                { description: { contains: query.search } },
+                { title: { contains: query.search, mode: 'insensitive' } },
+                { description: { contains: query.search, mode: 'insensitive' } },
+                { mentor: { name: { contains: query.search, mode: 'insensitive' } } },
+                { category: { name: { contains: query.search, mode: 'insensitive' } } },
             ];
         }
         if (query.level && query.level !== 'ALL_LEVELS') {
@@ -332,7 +334,8 @@ export class CoursesService {
                 uploadUrl: `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable`,
                 driveFolder: 'SkillBuilder Videos',
                 driveFileId: `gdrive_${uploadId}`,
-                mediaUrl: `https://drive.google.com/file/d/gdrive_${uploadId}/view`,
+                mediaUrl: `https://drive.google.com/uc?export=download&id=gdrive_${uploadId}`,
+                viewUrl: `https://drive.google.com/file/d/gdrive_${uploadId}/view`,
                 expiresIn: 3600,
             };
         }

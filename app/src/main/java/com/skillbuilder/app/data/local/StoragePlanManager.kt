@@ -38,7 +38,7 @@ object StoragePlanManager {
                 "Uses your 15GB Google Drive quota",
                 "Zero hosting cost for creator",
                 "Automatic private permissions for enrolled students",
-                "Ideal for 1-to-1 mentorship & skill swaps"
+                "Ideal for 1-to-1 mentorship & personalized learning"
             ),
             isRecommended = false
         ),
@@ -128,6 +128,10 @@ object StoragePlanManager {
 
     fun isStorageConnected(): Boolean {
         return _storageAccount.value.isConnected
+    }
+
+    fun isGoogleDriveConnected(): Boolean {
+        return _storageAccount.value.isGoogleDriveConnected
     }
 
     fun connectGoogleDrive(email: String) {

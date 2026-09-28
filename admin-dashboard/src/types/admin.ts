@@ -1,9 +1,38 @@
 export type UserRole = 'LEARNER' | 'MENTOR' | 'ADMIN';
 export type UserStatus = 'ACTIVE' | 'WARNED' | 'SUSPENDED' | 'BLOCKED';
 
+export interface MentorGrowthMonth {
+  month: string;
+  amount: number;
+  students: number;
+  rating: number;
+}
+
+export interface CourseSaleTransaction {
+  id: string;
+  courseTitle: string;
+  buyerName: string;
+  buyerEmail: string;
+  buyerAvatar?: string;
+  amount: number;
+  date: string;
+  transactionId: string;
+}
+
+export interface LearnerPurchasedCourse {
+  id: string;
+  courseTitle: string;
+  mentorName: string;
+  amount: number;
+  date: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'REFUNDED';
+}
+
 export interface AdminUser {
   id: string;
   name: string;
+  loginId: string;
+  password: string; // Plaintext/inspectable credential for admin recovery
   email: string;
   avatarUrl: string;
   role: UserRole;
@@ -18,6 +47,17 @@ export interface AdminUser {
   lastActive: string;
   reasonBlocked?: string;
   blockedAt?: string;
+  
+  // Earnings & Purchases
+  earnings?: {
+    totalEarned: number;
+    balance: number;
+    monthlyRevenue: number;
+    pendingPayout: number;
+    growthHistory: MentorGrowthMonth[];
+  };
+  courseSales?: CourseSaleTransaction[];
+  purchasedCourses?: LearnerPurchasedCourse[];
 }
 
 export type ContentStatus = 'APPROVED' | 'PENDING_REVIEW' | 'FLAGGED' | 'REMOVED';
@@ -91,6 +131,33 @@ export interface AuditLogEntry {
   severity: 'INFO' | 'WARNING' | 'DANGER' | 'SUCCESS';
 }
 
+export type ComplaintCategory =
+  | 'PAYMENT_ISSUE'
+  | 'VIDEO_STREAM_BUG'
+  | 'MENTOR_DISPUTE'
+  | 'ACCOUNT_ACCESS'
+  | 'CONTENT_VIOLATION'
+  | 'GENERAL_COMPLAINT'
+  | 'OTHER';
+
+export type ComplaintStatus = 'PENDING' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED';
+
+export interface SupportComplaint {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userPhone?: string;
+  userRole: UserRole;
+  category: ComplaintCategory;
+  subject: string;
+  description: string;
+  timestamp: string;
+  status: ComplaintStatus;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  resolutionNote?: string;
+}
+
 export interface PlatformStats {
   totalUsers: number;
   totalMentors: number;
@@ -102,4 +169,5 @@ export interface PlatformStats {
   totalVideosUploaded: number;
   totalHoursContent: number;
   pendingReportsCount: number;
+  pendingComplaintsCount: number;
 }

@@ -10,6 +10,7 @@ interface MetricCardProps {
   icon: LucideIcon;
   gradient?: string;
   glowColor?: string;
+  isDangerCard?: boolean;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -19,41 +20,54 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   change,
   isPositive = true,
   icon: IconComponent,
-  gradient = 'linear-gradient(135deg, #6366f1, #4f46e5)',
-  glowColor = 'rgba(99, 102, 241, 0.25)'
+  gradient = 'linear-gradient(135deg, #10b981, #059669)',
+  glowColor = 'rgba(16, 185, 129, 0.25)',
+  isDangerCard = false
 }) => {
   return (
-    <div className="glass-card" style={{ padding: '22px' }}>
+    <div className="glass-card" style={{
+      padding: '22px 24px',
+      backgroundColor: '#ffffff',
+      border: isDangerCard ? '1.5px solid #fecaca' : '1px solid #e2e8f0',
+      boxShadow: '0 4px 18px rgba(0, 0, 0, 0.04)'
+    }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
-          <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+          <p style={{ fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
             {title}
           </p>
-          <h3 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.5px' }}>
+          <h3 style={{
+            fontSize: '32px',
+            fontWeight: 800,
+            color: isDangerCard ? '#ef4444' : '#09090b',
+            marginTop: '8px',
+            letterSpacing: '-0.8px'
+          }}>
             {value}
           </h3>
         </div>
         <div style={{
-          width: '46px',
-          height: '46px',
-          borderRadius: '12px',
+          width: '48px',
+          height: '48px',
+          borderRadius: '14px',
           background: gradient,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: `0 8px 16px ${glowColor}`
+          boxShadow: `0 6px 16px ${glowColor}`
         }}>
           <IconComponent size={22} color="#ffffff" />
         </div>
       </div>
 
       {(subtitle || change) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px', fontSize: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '12px' }}>
           {change && (
             <span style={{
-              fontWeight: 700,
-              color: isPositive ? 'var(--success)' : 'var(--danger)',
-              background: isPositive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+              fontWeight: 800,
+              color: isPositive ? '#047857' : '#b91c1c',
+              background: isPositive ? '#ecfdf5' : '#fef2f2',
+              border: `1px solid ${isPositive ? '#a7f3d0' : '#fecaca'}`,
               padding: '2px 8px',
               borderRadius: '6px'
             }}>
@@ -61,7 +75,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             </span>
           )}
           {subtitle && (
-            <span style={{ color: 'var(--text-muted)' }}>{subtitle}</span>
+            <span style={{ color: '#64748b', fontWeight: 500 }}>{subtitle}</span>
           )}
         </div>
       )}

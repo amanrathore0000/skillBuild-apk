@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Foldable devices and 7-inch tablets (smallest width >= 600dp) -->
+    <dimen name="splash_logo_width">340dp</dimen>
+    <dimen name="splash_logo_height">109dp</dimen>
+    <dimen name="splash_icon_size">160dp</dimen>
+    <dimen name="splash_v31_size">140dp</dimen>
+</resources>

@@ -62,6 +62,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.skillbuilder.app.data.local.AppSettings
+import com.skillbuilder.app.data.local.AppThemeMode
 import com.skillbuilder.app.data.local.SampleData
 import com.skillbuilder.app.data.local.UserSession
 import com.skillbuilder.app.data.local.tr
@@ -94,6 +97,20 @@ fun EnrolledCoursesScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
 
+    val themeMode by AppSettings.themeMode.collectAsState()
+    val systemDark = isSystemInDarkTheme()
+    val isDark = when (themeMode) {
+        AppThemeMode.SYSTEM -> systemDark
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK -> true
+    }
+
+    val screenBg = if (isDark) Color(0xFF2B2B2B) else Color(0xFFFFFFFF)
+    val textPrimary = if (isDark) Color(0xFFFFFFFF) else Color(0xFF111827)
+    val textSecondary = if (isDark) Color(0xFFB3B3B3) else Color(0xFF6B7280)
+    val activeAccent = if (isDark) Color(0xFF5995E5) else Color(0xFF2464B8)
+    val cardBg = if (isDark) Color(0xFF383838) else Color(0xFFF3F4F6)
+
     val categories = listOf("All", "Tech & Coding", "Music", "Culinary Arts", "Design & Art", "Languages")
 
     val filteredCourses = remember(enrolledList, searchQuery, selectedCategory) {
@@ -110,11 +127,12 @@ fun EnrolledCoursesScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(screenBg)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (onBack != null) {
                 TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = screenBg),
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -144,8 +162,7 @@ fun EnrolledCoursesScreen(
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                    }
                 )
             }
 
@@ -227,9 +244,8 @@ fun EnrolledCoursesScreen(
                     .padding(horizontal = 16.dp, vertical = 6.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                    containerColor = cardBg
+                )
             ) {
                 Row(
                     modifier = Modifier
@@ -338,6 +354,7 @@ fun EnrolledCoursesScreen(
                     items(filteredCourses, key = { it.id }) { course ->
                         EnrolledCourseCard(
                             course = course,
+                            cardBg = cardBg,
                             onOpenCourse = { onOpenVideo(course) }
                         )
                     }
@@ -350,16 +367,16 @@ fun EnrolledCoursesScreen(
 @Composable
 private fun EnrolledCourseCard(
     course: MentorVideo,
+    cardBg: Color,
     onOpenCourse: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onOpenCourse() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg)
     ) {
         Column {
             // 16:9 Thumbnail Header with overlays
@@ -367,7 +384,7 @@ private fun EnrolledCourseCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
-                    .background(Color.Black)
+                    .background(Color(0xFF2B2B2B))
             ) {
                 if (!course.thumbnailUrl.isNullOrBlank()) {
                     AsyncImage(
@@ -415,7 +432,7 @@ private fun EnrolledCourseCard(
                 // Duration bottom right
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = Color.Black.copy(alpha = 0.8f),
+                    color = Color(0xFF2B2B2B).copy(alpha = 0.8f),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(10.dp)
@@ -461,8 +478,8 @@ private fun EnrolledCourseCard(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = Color(0xFF10B981).copy(alpha = 0.12f),
-                        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.3f))
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -471,7 +488,7 @@ private fun EnrolledCourseCard(
                             Icon(
                                 Icons.Rounded.CheckCircle,
                                 contentDescription = null,
-                                tint = Color(0xFF10B981),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))

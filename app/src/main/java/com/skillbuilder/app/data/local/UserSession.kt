@@ -77,11 +77,11 @@ object UserSession {
     }
 
     /**
-     * Authenticates an already-registered Google user during login.
+     * Authenticates or seamlessly registers a Google user during login.
      */
-    fun loginWithGoogle(googleUser: GoogleUserData): Result<User> {
+    fun loginWithGoogle(googleUser: GoogleUserData, defaultIsMentor: Boolean = false): Result<User> {
         val repo = repository ?: return Result.failure(IllegalStateException("Session not initialized"))
-        val result = repo.loginWithGoogle(googleUser)
+        val result = repo.loginWithGoogle(googleUser, defaultIsMentor)
         result.onSuccess { user ->
             _currentUser.value = user
         }

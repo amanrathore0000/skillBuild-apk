@@ -62,10 +62,13 @@ import com.skillbuilder.app.data.local.SampleData
 import com.skillbuilder.app.domain.model.Course
 import com.skillbuilder.app.domain.model.MentorVideo
 import com.skillbuilder.app.ui.screens.learn.VideoDetailPlayerScreen
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 @Composable
 fun ServerCoursesScreen(
-    onCourseClick: (Course) -> Unit = {}
+    onCourseClick: (Course) -> Unit = {},
+    onOpenVideo: ((MentorVideo) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
@@ -165,7 +168,7 @@ fun ServerCoursesScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Header
@@ -249,7 +252,12 @@ fun ServerCoursesScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .clickable {
-                            selectedVideoForDetail = course.toMentorVideo()
+                            val mentorVideo = course.toMentorVideo()
+                            if (onOpenVideo != null) {
+                                onOpenVideo(mentorVideo)
+                            } else {
+                                selectedVideoForDetail = mentorVideo
+                            }
                             onCourseClick(course)
                         },
                     shape = RoundedCornerShape(14.dp),
@@ -398,10 +406,18 @@ fun ServerCoursesScreen(
 
     // Opens full trial video player and enrollment page
     selectedVideoForDetail?.let { video ->
-        VideoDetailPlayerScreen(
-            video = video,
-            onDismiss = { selectedVideoForDetail = null }
-        )
+        Dialog(
+            onDismissRequest = { selectedVideoForDetail = null },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            VideoDetailPlayerScreen(
+                video = video,
+                onDismiss = { selectedVideoForDetail = null }
+            )
+        }
     }
 }
 

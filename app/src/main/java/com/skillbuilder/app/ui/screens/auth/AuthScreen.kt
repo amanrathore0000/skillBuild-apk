@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,14 +73,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun AuthScreen(
     googleAuthClient: GoogleAuthClient,
+    initialEmail: String = "",
     onNavigateToRegister: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit = {},
     onLoginSuccess: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
-    var email by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(initialEmail) }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
@@ -102,33 +105,15 @@ fun AuthScreen(
             // Top branding & hero
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 16.dp)
+                modifier = Modifier.padding(top = 74.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                        .border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.app_logo),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(CircleShape)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = stringResource(R.string.app_name).uppercase(),
+                    text = "Login",
                     style = MaterialTheme.typography.headlineLarge.copy(
+                        fontSize = 40.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 2.sp
+                        letterSpacing = 1.sp
                     ),
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -205,7 +190,28 @@ fun AuthScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                Spacer(modifier = Modifier.height(18.dp))
+                // Forgot Password Link
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = onNavigateToForgotPassword,
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Forgot Password?",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Email Login Button
                 Button(
@@ -286,7 +292,7 @@ fun AuthScreen(
                                             ).show()
                                             onLoginSuccess()
                                         }.onFailure { err ->
-                                            errorMessage = err.message ?: "No account registered with ${result.user.email}. Please sign up first."
+                                            errorMessage = err.message ?: "Google Sign-In failed. Please try again."
                                         }
                                     }
                                     is GoogleAuthResult.Canceled -> {
@@ -389,7 +395,7 @@ private fun GoogleGIcon() {
             text = "G",
             fontWeight = FontWeight.Black,
             fontSize = 14.sp,
-            color = Color(0xFF4285F4)
+            color = Color(0xFF2464B8)
         )
     }
 }

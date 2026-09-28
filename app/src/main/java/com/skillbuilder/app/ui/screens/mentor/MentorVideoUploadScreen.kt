@@ -42,6 +42,7 @@ import androidx.compose.material.icons.rounded.Collections
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.FolderShared
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Public
@@ -81,14 +82,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -108,13 +112,25 @@ import com.skillbuilder.app.domain.model.MentorVideo
 import com.skillbuilder.app.domain.model.StoragePlan
 import com.skillbuilder.app.ui.components.VideoPlayer
 import com.skillbuilder.app.util.AvatarImageHelper
+import com.skillbuilder.app.util.VideoStorageHelper
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MentorVideoUploadScreen() {
+fun MentorVideoUploadScreen(
+    onOpenVideo: ((MentorVideo) -> Unit)? = null
+) {
     val context = LocalContext.current
     var isUploadFormOpen by remember { mutableStateOf(false) }
     var activeVideoPreview by remember { mutableStateOf<MentorVideo?>(null) }
+
+    val handleOpenVideo: (MentorVideo) -> Unit = { video ->
+        if (onOpenVideo != null) {
+            onOpenVideo(video)
+        } else {
+            activeVideoPreview = video
+        }
+    }
 
     // Observes live videos synced from central server and mentor's account
     val allVideos by SampleData.allVideosFlow.collectAsState()
@@ -122,10 +138,18 @@ fun MentorVideoUploadScreen() {
     var videoPendingDeletion by remember { mutableStateOf<MentorVideo?>(null) }
 
     activeVideoPreview?.let { video ->
-        com.skillbuilder.app.ui.screens.learn.VideoDetailPlayerScreen(
-            video = video,
-            onDismiss = { activeVideoPreview = null }
-        )
+        Dialog(
+            onDismissRequest = { activeVideoPreview = null },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            com.skillbuilder.app.ui.screens.learn.VideoDetailPlayerScreen(
+                video = video,
+                onDismiss = { activeVideoPreview = null }
+            )
+        }
     }
 
     // Confirmation Dialog before deleting video from server
@@ -209,15 +233,22 @@ fun MentorVideoUploadScreen() {
     val currentUser by UserSession.currentUser.collectAsState()
     val currentPlan = StoragePlanManager.getCurrentPlan()
 
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val activeAccent = if (isDark) Color(0xFF3B82F6) else MaterialTheme.colorScheme.primary
+    val surfaceCard = if (isDark) Color(0xFF1E1E1E) else MaterialTheme.colorScheme.surface
+    val cardBorder = if (isDark) Color(0xFF383838) else MaterialTheme.colorScheme.outline
+    val textPrimary = if (isDark) Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant
+    val inputBg = if (isDark) Color(0xFF252525) else Color(0xFFF1F5F9)
+
     if (showConnectStorageDialog) {
         ConnectStorageDialog(
-            userEmail = currentUser.email.ifBlank { "mentor@gmail.com" },
+            userEmail = storageAccount.googleDriveEmail ?: currentUser.email.ifBlank { "mentor@gmail.com" },
             onDismiss = {
                 showConnectStorageDialog = false
                 pendingUploadAfterConnect = false
             },
-            onConnectDrive = {
-                val email = currentUser.email.ifBlank { "mentor@gmail.com" }
+            onConnectDrive = { email ->
                 StoragePlanManager.connectGoogleDrive(email)
                 showConnectStorageDialog = false
                 Toast.makeText(context, "Connected to Google Drive ($email)!", Toast.LENGTH_SHORT).show()
@@ -280,7 +311,7 @@ fun MentorVideoUploadScreen() {
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Top Header
@@ -294,7 +325,7 @@ fun MentorVideoUploadScreen() {
                     Text(
                         text = "CREATOR STUDIO",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = MaterialTheme.colorScheme.primary,
+                        color = activeAccent,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
@@ -314,7 +345,7 @@ fun MentorVideoUploadScreen() {
                         }
                     },
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = activeAccent, contentColor = Color.White)
                 ) {
                     Icon(Icons.Rounded.VideoCall, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(6.dp))
@@ -329,8 +360,8 @@ fun MentorVideoUploadScreen() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                    colors = CardDefaults.cardColors(containerColor = surfaceCard),
+                    border = BorderStroke(1.2.dp, activeAccent.copy(alpha = 0.4f))
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Row(
@@ -344,14 +375,14 @@ fun MentorVideoUploadScreen() {
                             ) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    color = activeAccent.copy(alpha = 0.15f),
                                     modifier = Modifier.size(42.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = Icons.Rounded.Storage,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
+                                            tint = activeAccent,
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -377,7 +408,7 @@ fun MentorVideoUploadScreen() {
                                     showConnectStorageDialog = true
                                 },
                                 shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                colors = ButtonDefaults.buttonColors(containerColor = activeAccent, contentColor = Color.White),
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                             ) {
                                 Text("Connect", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
@@ -389,17 +420,11 @@ fun MentorVideoUploadScreen() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (storageAccount.isAwsConnected) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-                        } else {
-                            Color(0xFF0F9D58).copy(alpha = 0.08f)
-                        }
-                    ),
+                    colors = CardDefaults.cardColors(containerColor = surfaceCard),
                     border = BorderStroke(
-                        1.dp,
-                        if (storageAccount.isAwsConnected) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-                        else Color(0xFF0F9D58).copy(alpha = 0.35f)
+                        1.2.dp,
+                        if (storageAccount.isAwsConnected) activeAccent.copy(alpha = 0.45f)
+                        else Color(0xFF10B981).copy(alpha = 0.45f)
                     )
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
@@ -414,14 +439,14 @@ fun MentorVideoUploadScreen() {
                             ) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = if (storageAccount.isAwsConnected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color(0xFF0F9D58).copy(alpha = 0.15f),
+                                    color = if (storageAccount.isAwsConnected) activeAccent.copy(alpha = 0.15f) else Color(0xFF10B981).copy(alpha = 0.15f),
                                     modifier = Modifier.size(38.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = if (storageAccount.isAwsConnected) Icons.Rounded.CloudUpload else Icons.Rounded.FolderShared,
                                             contentDescription = null,
-                                            tint = if (storageAccount.isAwsConnected) MaterialTheme.colorScheme.primary else Color(0xFF0F9D58),
+                                            tint = if (storageAccount.isAwsConnected) activeAccent else Color(0xFF10B981),
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -437,12 +462,12 @@ fun MentorVideoUploadScreen() {
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Surface(
                                             shape = RoundedCornerShape(4.dp),
-                                            color = if (storageAccount.isAwsConnected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color(0xFF0F9D58).copy(alpha = 0.15f)
+                                            color = if (storageAccount.isAwsConnected) activeAccent.copy(alpha = 0.15f) else Color(0xFF10B981).copy(alpha = 0.15f)
                                         ) {
                                             Text(
                                                 text = "Connected ✓",
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                                                color = if (storageAccount.isAwsConnected) MaterialTheme.colorScheme.primary else Color(0xFF0F9D58),
+                                                color = if (storageAccount.isAwsConnected) activeAccent else Color(0xFF10B981),
                                                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                             )
                                         }
@@ -462,6 +487,8 @@ fun MentorVideoUploadScreen() {
                                         showStoragePlanDialog = true
                                     },
                                     shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, activeAccent),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = activeAccent),
                                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
                                     Text(
@@ -493,8 +520,8 @@ fun MentorVideoUploadScreen() {
                         LinearProgressIndicator(
                             progress = { usedRatio },
                             modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                            color = if (storageAccount.isAwsConnected) MaterialTheme.colorScheme.primary else Color(0xFF0F9D58),
-                            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                            color = if (storageAccount.isAwsConnected) activeAccent else Color(0xFF10B981),
+                            trackColor = cardBorder.copy(alpha = 0.5f)
                         )
 
                         Spacer(modifier = Modifier.height(6.dp))
@@ -511,7 +538,7 @@ fun MentorVideoUploadScreen() {
                             Text(
                                 text = if (storageAccount.isAwsConnected) "⚡ CloudFront CDN Active" else "🔒 Private Drive Link Active",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                color = if (storageAccount.isAwsConnected) MaterialTheme.colorScheme.primary else Color(0xFF0F9D58)
+                                color = if (storageAccount.isAwsConnected) activeAccent else Color(0xFF10B981)
                             )
                         }
                     }
@@ -524,8 +551,8 @@ fun MentorVideoUploadScreen() {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                colors = CardDefaults.cardColors(containerColor = surfaceCard),
+                border = BorderStroke(1.dp, cardBorder)
             ) {
                 Row(
                     modifier = Modifier
@@ -538,29 +565,29 @@ fun MentorVideoUploadScreen() {
                         Text(
                             text = "${allVideos.size}",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.primary
+                            color = activeAccent
                         )
-                        Text("Uploaded Videos", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Uploaded Videos", style = MaterialTheme.typography.labelSmall, color = textSecondary)
                     }
-                    Box(modifier = Modifier.height(28.dp).width(1.dp).background(MaterialTheme.colorScheme.outline))
+                    Box(modifier = Modifier.height(28.dp).width(1.dp).background(cardBorder))
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         val totalViews = allVideos.sumOf { it.views }
                         Text(
                             text = if (totalViews > 1000) "${totalViews / 1000}k" else "$totalViews",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = textPrimary
                         )
-                        Text("Total Views", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Total Views", style = MaterialTheme.typography.labelSmall, color = textSecondary)
                     }
-                    Box(modifier = Modifier.height(28.dp).width(1.dp).background(MaterialTheme.colorScheme.outline))
+                    Box(modifier = Modifier.height(28.dp).width(1.dp).background(cardBorder))
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         val totalLikes = allVideos.sumOf { it.likes }
                         Text(
                             text = "$totalLikes",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF4CAF50)
+                            color = Color(0xFF10B981)
                         )
-                        Text("Total Likes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Total Likes", style = MaterialTheme.typography.labelSmall, color = textSecondary)
                     }
                 }
             }
@@ -577,13 +604,13 @@ fun MentorVideoUploadScreen() {
                     Text(
                         text = "YOUR UPLOADED CONTENT",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = textSecondary,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "${filteredVideos.size} of ${allVideos.size} Videos",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = activeAccent
                     )
                 }
 
@@ -592,12 +619,12 @@ fun MentorVideoUploadScreen() {
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search your videos by title, course, or tag...") },
+                        placeholder = { Text("Search your videos by title, course, or tag...", color = textSecondary) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Rounded.Search,
                                 contentDescription = "Search",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = activeAccent
                             )
                         },
                         trailingIcon = {
@@ -606,18 +633,20 @@ fun MentorVideoUploadScreen() {
                                     Icon(
                                         imageVector = Icons.Rounded.Close,
                                         contentDescription = "Clear",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        tint = textSecondary
                                     )
                                 }
                             }
                         },
                         singleLine = true,
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                            focusedBorderColor = activeAccent,
+                            unfocusedBorderColor = cardBorder,
+                            focusedContainerColor = inputBg,
+                            unfocusedContainerColor = inputBg,
+                            focusedTextColor = textPrimary,
+                            unfocusedTextColor = textPrimary
                         )
                     )
                 }
@@ -637,24 +666,26 @@ fun MentorVideoUploadScreen() {
                             Icons.Rounded.VideoLibrary,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.outline
+                            tint = textSecondary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = if (searchQuery.isNotBlank()) "No videos match \"$searchQuery\"" else "No videos uploaded yet",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = textPrimary
                         )
                         Text(
                             text = if (searchQuery.isNotBlank()) "Try another keyword or clear the search bar" else "Click 'Upload Video' above to publish to the server.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = textSecondary
                         )
                         if (searchQuery.isNotBlank()) {
                             Spacer(modifier = Modifier.height(12.dp))
                             OutlinedButton(
                                 onClick = { searchQuery = "" },
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, activeAccent),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = activeAccent)
                             ) {
                                 Text("Clear Search")
                             }
@@ -670,10 +701,10 @@ fun MentorVideoUploadScreen() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
-                    .clickable { activeVideoPreview = video },
+                    .clickable { handleOpenVideo(video) },
                 shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                colors = CardDefaults.cardColors(containerColor = surfaceCard),
+                border = BorderStroke(1.dp, cardBorder)
             ) {
                 Column {
                     // 16:9 Thumbnail Box
@@ -681,7 +712,8 @@ fun MentorVideoUploadScreen() {
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(16f / 9f)
-                            .background(Color.Black),
+                            .background(Color(0xFF1E1E1E))
+                            .clickable { handleOpenVideo(video) },
                         contentAlignment = Alignment.Center
                     ) {
                         if (!video.thumbnailUrl.isNullOrBlank()) {
@@ -696,14 +728,16 @@ fun MentorVideoUploadScreen() {
                         // Play overlay button
                         Surface(
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                            modifier = Modifier.size(48.dp)
+                            color = activeAccent.copy(alpha = 0.9f),
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clickable { handleOpenVideo(video) }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     Icons.Rounded.PlayArrow,
                                     contentDescription = "Play Video",
-                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    tint = Color.White,
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
@@ -712,7 +746,7 @@ fun MentorVideoUploadScreen() {
                         // Duration Badge bottom right
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = Color.Black.copy(alpha = 0.8f),
+                            color = Color(0xFF1E1E1E).copy(alpha = 0.85f),
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
                                 .padding(8.dp)
@@ -728,7 +762,7 @@ fun MentorVideoUploadScreen() {
                         // Storage Provider Badge bottom left
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = if (video.storageProvider == "GOOGLE_DRIVE") Color(0xFF0F9D58).copy(alpha = 0.9f) else Color(0xFF1976D2).copy(alpha = 0.9f),
+                            color = if (video.storageProvider == "GOOGLE_DRIVE") Color(0xFF0F9D58).copy(alpha = 0.9f) else activeAccent.copy(alpha = 0.9f),
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .padding(8.dp)
@@ -755,7 +789,8 @@ fun MentorVideoUploadScreen() {
                         // Visibility Badge top left
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                            color = surfaceCard.copy(alpha = 0.9f),
+                            border = BorderStroke(0.8.dp, cardBorder),
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(8.dp)
@@ -767,14 +802,14 @@ fun MentorVideoUploadScreen() {
                                 Icon(
                                     imageVector = if (video.visibility == "Public") Icons.Rounded.Public else Icons.Rounded.Lock,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = activeAccent,
                                     modifier = Modifier.size(11.dp)
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
                                     text = video.visibility,
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = textPrimary
                                 )
                             }
                         }
@@ -808,7 +843,7 @@ fun MentorVideoUploadScreen() {
                         Text(
                             text = video.title,
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = textPrimary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -822,16 +857,16 @@ fun MentorVideoUploadScreen() {
                             Text(
                                 text = "${video.courseTitle} • ${video.category}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
+                                color = activeAccent
                             )
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                color = Color(0xFF10B981).copy(alpha = 0.15f)
                             ) {
                                 Text(
                                     text = video.price,
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = Color(0xFF10B981),
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
@@ -916,6 +951,19 @@ fun YouTubeStyleUploadModal(
 ) {
     val context = LocalContext.current
     val currentUser by UserSession.currentUser.collectAsState()
+
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val activeAccent = if (isDark) Color(0xFF3B82F6) else MaterialTheme.colorScheme.primary
+    val surfaceCard = if (isDark) Color(0xFF1E1E1E) else MaterialTheme.colorScheme.surface
+    val cardBorder = if (isDark) Color(0xFF383838) else MaterialTheme.colorScheme.outline
+    val textPrimary = if (isDark) Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onBackground
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant
+    val inputBg = if (isDark) Color(0xFF252525) else Color(0xFFF1F5F9)
+
+    val coroutineScope = rememberCoroutineScope()
+    var uploadProgress by remember { mutableFloatStateOf(0f) }
+    var uploadSourceMode by remember { mutableStateOf("FILE") } // "FILE" or "DRIVE_LINK"
+    var driveLinkInput by remember { mutableStateOf("") }
 
     // Video File Picker (MANDATORY)
     var selectedVideoUri by remember { mutableStateOf<Uri?>(null) }
@@ -1043,7 +1091,7 @@ fun YouTubeStyleUploadModal(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isUploading) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
@@ -1078,7 +1126,10 @@ fun YouTubeStyleUploadModal(
                         )
                     }
 
-                    IconButton(onClick = onDismiss) {
+                    IconButton(
+                        onClick = { if (!isUploading) onDismiss() },
+                        enabled = !isUploading
+                    ) {
                         Icon(Icons.Rounded.Close, contentDescription = "Close")
                     }
                 }
@@ -1108,59 +1159,192 @@ fun YouTubeStyleUploadModal(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 1. SELECT VIDEO FILE (MANDATORY)
+                // 1. COURSE VIDEO SOURCE
                 Text(
-                    text = "1. Course Video File *",
+                    text = "1. Course Video Source *",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (attemptedSubmit && selectedVideoUri == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    color = if (attemptedSubmit && ((uploadSourceMode == "FILE" && selectedVideoUri == null) || (uploadSourceMode == "DRIVE_LINK" && VideoStorageHelper.extractGoogleDriveFileId(driveLinkInput) == null))) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { videoPickerLauncher.launch("video/*") },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = when {
-                            selectedVideoUri != null -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                            attemptedSubmit -> MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
-                            else -> MaterialTheme.colorScheme.surface
-                        }
-                    ),
-                    border = BorderStroke(
-                        1.5.dp,
-                        when {
-                            selectedVideoUri != null -> MaterialTheme.colorScheme.primary
-                            attemptedSubmit -> MaterialTheme.colorScheme.error
-                            else -> MaterialTheme.colorScheme.outline
-                        }
-                    )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { uploadSourceMode = "FILE" },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (uploadSourceMode == "FILE") MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, if (uploadSourceMode == "FILE") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                     ) {
-                        Icon(
-                            imageVector = if (selectedVideoUri != null) Icons.Rounded.CheckCircle else Icons.Rounded.VideoCall,
-                            contentDescription = null,
-                            tint = when {
+                        Row(
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Rounded.VideoCall,
+                                contentDescription = null,
+                                tint = if (uploadSourceMode == "FILE") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Upload File",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = if (uploadSourceMode == "FILE") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable {
+                                uploadSourceMode = "DRIVE_LINK"
+                                selectedStorageProvider = "GOOGLE_DRIVE"
+                            },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (uploadSourceMode == "DRIVE_LINK") Color(0xFF0F9D58).copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, if (uploadSourceMode == "DRIVE_LINK") Color(0xFF0F9D58) else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.Rounded.Link,
+                                contentDescription = null,
+                                tint = if (uploadSourceMode == "DRIVE_LINK") Color(0xFF0F9D58) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Google Drive Link",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = if (uploadSourceMode == "DRIVE_LINK") Color(0xFF0F9D58) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (uploadSourceMode == "FILE") {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { videoPickerLauncher.launch("video/*") },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = when {
+                                selectedVideoUri != null -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                attemptedSubmit -> MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
+                                else -> MaterialTheme.colorScheme.surface
+                            }
+                        ),
+                        border = BorderStroke(
+                            1.5.dp,
+                            when {
                                 selectedVideoUri != null -> MaterialTheme.colorScheme.primary
                                 attemptedSubmit -> MaterialTheme.colorScheme.error
-                                else -> MaterialTheme.colorScheme.primary
-                            },
-                            modifier = Modifier.size(32.dp)
+                                else -> MaterialTheme.colorScheme.outline
+                            }
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = if (selectedVideoUri != null) "Video Selected ✓" else "Choose Video File * (Mandatory)",
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                color = if (attemptedSubmit && selectedVideoUri == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = if (selectedVideoUri != null) Icons.Rounded.CheckCircle else Icons.Rounded.VideoCall,
+                                contentDescription = null,
+                                tint = when {
+                                    selectedVideoUri != null -> MaterialTheme.colorScheme.primary
+                                    attemptedSubmit -> MaterialTheme.colorScheme.error
+                                    else -> MaterialTheme.colorScheme.primary
+                                },
+                                modifier = Modifier.size(32.dp)
                             )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = if (selectedVideoUri != null) "Video Selected ✓" else "Choose Video File * (Mandatory)",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = if (attemptedSubmit && selectedVideoUri == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = selectedVideoName ?: "Select MP4, MOV, or MKV file from device",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // DRIVE_LINK Mode
+                    val detectedDriveId = VideoStorageHelper.extractGoogleDriveFileId(driveLinkInput.trim())
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = driveLinkInput,
+                            onValueChange = { driveLinkInput = it },
+                            label = { Text("Google Drive Video Shareable Link *") },
+                            placeholder = { Text("https://drive.google.com/file/d/...") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = attemptedSubmit && detectedDriveId == null,
+                            trailingIcon = {
+                                if (detectedDriveId != null) {
+                                    Icon(
+                                        Icons.Rounded.CheckCircle,
+                                        contentDescription = "Valid Link",
+                                        tint = Color(0xFF0F9D58)
+                                    )
+                                }
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        if (detectedDriveId != null) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFF0F9D58).copy(alpha = 0.12f),
+                                modifier = Modifier.padding(top = 2.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Rounded.FolderShared, contentDescription = null, tint = Color(0xFF0F9D58), modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        "Valid Google Drive File ID: $detectedDriveId ✓",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                                        color = Color(0xFF0F9D58)
+                                    )
+                                }
+                            }
+                        } else if (attemptedSubmit) {
                             Text(
-                                text = selectedVideoName ?: "Select MP4, MOV, or MKV file from device",
+                                "Please enter a valid Google Drive share link (e.g. drive.google.com/file/d/...)",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        } else {
+                            Text(
+                                "Ensure file sharing is set to 'Anyone with the link can view' in your Google Drive.",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 4.dp)
                             )
                         }
                     }
@@ -1247,7 +1431,7 @@ fun YouTubeStyleUploadModal(
                             text = if (isCurrentAws) {
                                 "• Global AWS CloudFront CDN delivery with adaptive bitrate streaming (HLS 1080p/4K).\n• Zero Google Drive view quotas; unlimited concurrent student streams."
                             } else {
-                                "• Stored securely in your personal Google Drive ($driveEmail).\n• Kept private: SkillBuilder automatically grants viewer permissions only to enrolled learners or accepted swap partners."
+                                "• Stored securely in your personal Google Drive ($driveEmail).\n• Kept private: SkillBuilder automatically grants viewer permissions only to enrolled learners."
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1318,7 +1502,7 @@ fun YouTubeStyleUploadModal(
                         )
                         Surface(
                             shape = CircleShape,
-                            color = Color.Black.copy(alpha = 0.6f),
+                            color = Color(0xFF2B2B2B).copy(alpha = 0.6f),
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
                                 .padding(8.dp)
@@ -1610,6 +1794,7 @@ fun YouTubeStyleUploadModal(
                 if (isUploading) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         LinearProgressIndicator(
+                            progress = { if (uploadProgress > 0f) uploadProgress else 0.5f },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(6.dp),
@@ -1617,7 +1802,7 @@ fun YouTubeStyleUploadModal(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Encoding video, generating preview stream & publishing to central server...",
+                            text = if (uploadProgress > 0f) "Saving video to persistent vault (${(uploadProgress * 100).toInt()}%)..." else "Encoding video & storing to persistent storage...",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -1627,9 +1812,14 @@ fun YouTubeStyleUploadModal(
                         onClick = {
                             attemptedSubmit = true
 
-                            // 1. Mandatory Video File Validation
-                            if (selectedVideoUri == null) {
+                            // 1. Mandatory Video Validation
+                            if (uploadSourceMode == "FILE" && selectedVideoUri == null) {
                                 Toast.makeText(context, "⚠️ Please select a course video file", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            val extractedDriveId = if (uploadSourceMode == "DRIVE_LINK") VideoStorageHelper.extractGoogleDriveFileId(driveLinkInput.trim()) else null
+                            if (uploadSourceMode == "DRIVE_LINK" && extractedDriveId == null) {
+                                Toast.makeText(context, "⚠️ Please enter a valid Google Drive video link", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
 
@@ -1689,37 +1879,94 @@ fun YouTubeStyleUploadModal(
                             }
 
                             val tagsList = tagsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                            val newVideo = MentorVideo(
-                                id = "mv_${System.currentTimeMillis()}",
-                                title = title.trim(),
-                                courseTitle = courseTitle.trim(),
-                                duration = videoDurationText,
-                                views = 1,
-                                likes = 1,
-                                videoUrl = selectedVideoUri.toString(),
-                                thumbnailUrl = thumbnailUri,
-                                uploadDate = "Just now",
-                                description = description.trim(),
-                                visibility = visibility,
-                                category = category.trim(),
-                                tags = tagsList,
-                                level = level.trim(),
-                                price = formattedPrice,
-                                mentorName = currentUser.name.ifBlank { "Mentor" },
-                                storageProvider = selectedStorageProvider,
-                                driveFileId = if (selectedStorageProvider == "GOOGLE_DRIVE") "gdrive_${System.currentTimeMillis()}" else null,
-                                driveSharingLink = if (selectedStorageProvider == "GOOGLE_DRIVE") "https://drive.google.com/file/d/gdrive_${System.currentTimeMillis()}/view" else null,
-                                storagePlanType = if (selectedStorageProvider == "GOOGLE_DRIVE") "FREE_DRIVE" else StoragePlanManager.getCurrentPlan().id
-                            )
 
-                            StoragePlanManager.consumeStorage(524_288_000L) // 500 MB simulated video size
-                            onUploadComplete(newVideo)
+                            if (uploadSourceMode == "DRIVE_LINK") {
+                                val driveId = extractedDriveId!!
+                                val directStreamUrl = VideoStorageHelper.getGoogleDriveDirectStreamUrl(driveId)
+                                val driveViewUrl = VideoStorageHelper.getGoogleDriveViewUrl(driveId)
+                                val newVideo = MentorVideo(
+                                    id = "mv_${System.currentTimeMillis()}",
+                                    title = title.trim(),
+                                    courseTitle = courseTitle.trim(),
+                                    duration = videoDurationText,
+                                    views = 1,
+                                    likes = 1,
+                                    videoUrl = directStreamUrl,
+                                    thumbnailUrl = thumbnailUri,
+                                    uploadDate = "Just now",
+                                    description = description.trim(),
+                                    visibility = visibility,
+                                    category = category.trim(),
+                                    tags = tagsList,
+                                    level = level.trim(),
+                                    price = formattedPrice,
+                                    mentorName = currentUser.name.ifBlank { "Mentor" },
+                                    uploaderId = currentUser.id,
+                                    storageProvider = "GOOGLE_DRIVE",
+                                    driveFileId = driveId,
+                                    driveSharingLink = driveViewUrl,
+                                    storagePlanType = "FREE_DRIVE"
+                                )
+                                StoragePlanManager.connectGoogleDrive(storageAccount.googleDriveEmail ?: currentUser.email.ifBlank { "mentor@gmail.com" })
+                                StoragePlanManager.consumeStorage(524_288_000L)
+                                onUploadComplete(newVideo)
+                            } else {
+                                // FILE Mode: Asynchronously copy to app storage so it never expires!
+                                isUploading = true
+                                uploadProgress = 0f
+                                coroutineScope.launch {
+                                    val savedUri = VideoStorageHelper.saveVideoToInternalStorage(
+                                        context = context,
+                                        sourceUri = selectedVideoUri!!,
+                                        onProgress = { uploadProgress = it }
+                                    )
+                                    isUploading = false
+
+                                    if (savedUri == null) {
+                                        Toast.makeText(context, "⚠️ Failed to save video file. Please try selecting the video again.", Toast.LENGTH_LONG).show()
+                                        return@launch
+                                    }
+
+                                    val driveId = if (selectedStorageProvider == "GOOGLE_DRIVE") "gdrive_${System.currentTimeMillis()}" else null
+                                    val driveLink = if (selectedStorageProvider == "GOOGLE_DRIVE") "https://drive.google.com/file/d/$driveId/view" else null
+
+                                    val newVideo = MentorVideo(
+                                        id = "mv_${System.currentTimeMillis()}",
+                                        title = title.trim(),
+                                        courseTitle = courseTitle.trim(),
+                                        duration = videoDurationText,
+                                        views = 1,
+                                        likes = 1,
+                                        videoUrl = savedUri,
+                                        thumbnailUrl = thumbnailUri,
+                                        uploadDate = "Just now",
+                                        description = description.trim(),
+                                        visibility = visibility,
+                                        category = category.trim(),
+                                        tags = tagsList,
+                                        level = level.trim(),
+                                        price = formattedPrice,
+                                        mentorName = currentUser.name.ifBlank { "Mentor" },
+                                        uploaderId = currentUser.id,
+                                        storageProvider = selectedStorageProvider,
+                                        driveFileId = driveId,
+                                        driveSharingLink = driveLink,
+                                        storagePlanType = if (selectedStorageProvider == "GOOGLE_DRIVE") "FREE_DRIVE" else StoragePlanManager.getCurrentPlan().id
+                                    )
+
+                                    if (selectedStorageProvider == "GOOGLE_DRIVE") {
+                                        StoragePlanManager.connectGoogleDrive(storageAccount.googleDriveEmail ?: currentUser.email.ifBlank { "mentor@gmail.com" })
+                                    }
+                                    StoragePlanManager.consumeStorage(524_288_000L)
+                                    onUploadComplete(newVideo)
+                                }
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        colors = ButtonDefaults.buttonColors(containerColor = activeAccent, contentColor = Color.White)
                     ) {
                         Icon(Icons.Rounded.VideoCall, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -1739,6 +1986,10 @@ fun StorageSubscriptionDialog(
     val currentPlan = StoragePlanManager.getCurrentPlan()
     var selectedPlanId by remember { mutableStateOf(currentPlan.id) }
     val plans = StoragePlanManager.availablePlans
+
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val activeAccent = if (isDark) Color(0xFF3B82F6) else MaterialTheme.colorScheme.primary
+    val surfaceCard = if (isDark) Color(0xFF1E1E1E) else MaterialTheme.colorScheme.surface
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1913,7 +2164,7 @@ fun StorageSubscriptionDialog(
                     onPlanSelected(chosenPlan)
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                colors = ButtonDefaults.buttonColors(containerColor = activeAccent, contentColor = Color.White)
             ) {
                 Text("Select & Confirm Plan", fontWeight = FontWeight.Bold)
             }
@@ -1924,7 +2175,7 @@ fun StorageSubscriptionDialog(
             }
         },
         shape = RoundedCornerShape(20.dp),
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = surfaceCard
     )
 }
 
@@ -1932,22 +2183,30 @@ fun StorageSubscriptionDialog(
 fun ConnectStorageDialog(
     userEmail: String,
     onDismiss: () -> Unit,
-    onConnectDrive: () -> Unit,
+    onConnectDrive: (String) -> Unit,
     onSelectAws: () -> Unit
 ) {
+    var driveEmailInput by remember { mutableStateOf(userEmail.ifBlank { "mentor@gmail.com" }) }
+    var emailError by remember { mutableStateOf(false) }
+
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val activeAccent = if (isDark) Color(0xFF3B82F6) else MaterialTheme.colorScheme.primary
+    val surfaceCard = if (isDark) Color(0xFF1E1E1E) else MaterialTheme.colorScheme.surface
+    val cardBorder = if (isDark) Color(0xFF383838) else MaterialTheme.colorScheme.outline
+
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
             Surface(
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                color = activeAccent.copy(alpha = 0.15f),
                 modifier = Modifier.size(52.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Rounded.CloudUpload,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = activeAccent,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -1980,8 +2239,7 @@ fun ConnectStorageDialog(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { onConnectDrive() },
+                        .clip(RoundedCornerShape(14.dp)),
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF0F9D58).copy(alpha = 0.08f)),
                     border = BorderStroke(1.5.dp, Color(0xFF0F9D58).copy(alpha = 0.4f))
@@ -2015,7 +2273,7 @@ fun ConnectStorageDialog(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = userEmail,
+                                        text = "BYO Personal Storage",
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -2045,8 +2303,34 @@ fun ConnectStorageDialog(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
+                        OutlinedTextField(
+                            value = driveEmailInput,
+                            onValueChange = {
+                                driveEmailInput = it
+                                emailError = false
+                            },
+                            label = { Text("Google Drive / Gmail Address") },
+                            placeholder = { Text("e.g. mentor@gmail.com") },
+                            isError = emailError,
+                            supportingText = if (emailError) {
+                                { Text("Please enter a valid Google Drive email", color = MaterialTheme.colorScheme.error) }
+                            } else null,
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         Button(
-                            onClick = onConnectDrive,
+                            onClick = {
+                                val clean = driveEmailInput.trim()
+                                if (clean.isBlank() || !clean.contains("@")) {
+                                    emailError = true
+                                    return@Button
+                                }
+                                onConnectDrive(clean)
+                            },
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F9D58)),
                             modifier = Modifier.fillMaxWidth()
@@ -2065,8 +2349,8 @@ fun ConnectStorageDialog(
                         .clip(RoundedCornerShape(14.dp))
                         .clickable { onSelectAws() },
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
-                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                    colors = CardDefaults.cardColors(containerColor = surfaceCard),
+                    border = BorderStroke(1.2.dp, activeAccent.copy(alpha = 0.45f))
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(
@@ -2077,14 +2361,14 @@ fun ConnectStorageDialog(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    color = activeAccent.copy(alpha = 0.15f),
                                     modifier = Modifier.size(36.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             Icons.Rounded.CloudUpload,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
+                                            tint = activeAccent,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -2106,12 +2390,12 @@ fun ConnectStorageDialog(
 
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                color = activeAccent.copy(alpha = 0.15f)
                             ) {
                                 Text(
                                     text = "From ₹299/mo",
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = activeAccent,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                 )
                             }
@@ -2131,11 +2415,12 @@ fun ConnectStorageDialog(
                             onClick = onSelectAws,
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.fillMaxWidth(),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                            border = BorderStroke(1.dp, activeAccent),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = activeAccent)
                         ) {
-                            Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp), tint = activeAccent)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Choose AWS Plan", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text("Choose AWS Plan", fontWeight = FontWeight.Bold, color = activeAccent)
                         }
                     }
                 }
@@ -2148,7 +2433,6 @@ fun ConnectStorageDialog(
             }
         },
         shape = RoundedCornerShape(20.dp),
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = surfaceCard
     )
 }
-

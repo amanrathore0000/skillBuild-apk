@@ -2,99 +2,289 @@ import React, { useState, useMemo } from 'react';
 import { AdminUser, UserStatus } from '../types/admin';
 import {
   Search,
-  Filter,
   Ban,
   CheckCircle,
-  AlertTriangle,
   Eye,
   Shield,
   Phone,
   MapPin,
-  Calendar,
-  X
+  X,
+  TrendingUp,
+  AlertTriangle,
+  Clock,
+  DollarSign,
+  GraduationCap,
+  Users as UsersIcon,
+  ShoppingBag,
+  KeyRound,
+  ShieldAlert,
+  Download
 } from 'lucide-react';
+import { UserDetailsModal } from '../components/users/UserDetailsModal';
+import { MentorAnalyticsDrawer } from '../components/users/MentorAnalyticsDrawer';
+import { ExportUserModal } from '../components/users/ExportUserModal';
 
 interface UserManagementProps {
   users: AdminUser[];
   onOpenBlockModal: (user: AdminUser) => void;
   onUnblockUser: (userId: string) => void;
   onWarnUser: (user: AdminUser) => void;
+  onSuspendUser?: (user: AdminUser) => void;
+  onDirectModerate?: (userId: string, status: UserStatus, reason: string) => void;
 }
 
 export const UserManagement: React.FC<UserManagementProps> = ({
   users,
   onOpenBlockModal,
   onUnblockUser,
-  onWarnUser
+  onWarnUser,
+  onSuspendUser,
+  onDirectModerate
 }) => {
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'ALL' | 'MENTOR' | 'LEARNER'>('ALL');
+  const [activeTab, setActiveTab] = useState<'MENTOR' | 'LEARNER' | 'ALL'>('MENTOR');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'WARNED' | 'BLOCKED'>('ALL');
+  
+  // Modals & Drawers state
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<AdminUser | null>(null);
+  const [selectedMentorForAnalytics, setSelectedMentorForAnalytics] = useState<AdminUser | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+
+  const mentorCount = users.filter(u => u.role === 'MENTOR').length;
+  const learnerCount = users.filter(u => u.role === 'LEARNER').length;
 
   const filteredUsers = useMemo(() => {
     return users.filter(user => {
-      const matchesSearch = 
-        user.name.toLowerCase().includes(search.toLowerCase()) ||
-        user.email.toLowerCase().includes(search.toLowerCase()) ||
-        user.location.toLowerCase().includes(search.toLowerCase());
+      const q = search.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        user.name.toLowerCase().includes(q) ||
+        user.email.toLowerCase().includes(q) ||
+        (user.loginId && user.loginId.toLowerCase().includes(q)) ||
+        (user.phone && user.phone.toLowerCase().includes(q)) ||
+        (user.location && user.location.toLowerCase().includes(q));
 
-      const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
-      const matchesStatus = 
+      const matchesTab = activeTab === 'ALL' || user.role === activeTab;
+      const matchesStatus =
         statusFilter === 'ALL' ||
         (statusFilter === 'BLOCKED' && (user.status === 'BLOCKED' || user.status === 'SUSPENDED')) ||
         user.status === statusFilter;
 
-      return matchesSearch && matchesRole && matchesStatus;
+      return matchesSearch && matchesTab && matchesStatus;
     });
-  }, [users, search, roleFilter, statusFilter]);
+  }, [users, search, activeTab, statusFilter]);
+
+  const handleModerateFromModal = (user: AdminUser, action: 'BLOCK' | 'SUSPEND' | 'WARN' | 'ACTIVE') => {
+    if (action === 'ACTIVE') {
+      onUnblockUser(user.id);
+      setSelectedUserForDetail(prev => prev && prev.id === user.id ? { ...prev, status: 'ACTIVE' } : prev);
+    } else if (action === 'WARN') {
+      onWarnUser(user);
+      setSelectedUserForDetail(prev => prev && prev.id === user.id ? { ...prev, status: 'WARNED', warningCount: prev.warningCount + 1 } : prev);
+    } else if (action === 'BLOCK') {
+      onOpenBlockModal(user);
+    } else if (action === 'SUSPEND') {
+      if (onSuspendUser) {
+        onSuspendUser(user);
+        setSelectedUserForDetail(prev => prev && prev.id === user.id ? { ...prev, status: 'SUSPENDED' } : prev);
+      } else if (onDirectModerate) {
+        onDirectModerate(user.id, 'SUSPENDED', 'Administrative temporary 7-day suspension for guideline review');
+        setSelectedUserForDetail(prev => prev && prev.id === user.id ? { ...prev, status: 'SUSPENDED' } : prev);
+      }
+    }
+  };
 
   return (
     <div>
-      {/* Header Actions & Filters */}
-      <div className="glass-card" style={{ padding: '20px 24px', marginBottom: '24px' }}>
+      {/* Tab Navigation: Registration-based separation */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '2px solid #e4e4e7',
+          marginBottom: '24px',
+          paddingBottom: '2px'
+        }}
+      >
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {/* Mentors Tab */}
+          <button
+            onClick={() => setActiveTab('MENTOR')}
+            style={{
+              padding: '12px 20px',
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              fontWeight: 800,
+              fontSize: '15px',
+              color: activeTab === 'MENTOR' ? '#09090b' : '#71717a',
+              borderBottom: activeTab === 'MENTOR' ? '3px solid #09090b' : '3px solid transparent',
+              marginBottom: '-2px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <GraduationCap size={18} color={activeTab === 'MENTOR' ? '#09090b' : '#71717a'} />
+            Mentors
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 800,
+                padding: '2px 8px',
+                borderRadius: '12px',
+                backgroundColor: activeTab === 'MENTOR' ? '#09090b' : '#f4f4f5',
+                color: activeTab === 'MENTOR' ? '#ffffff' : '#71717a'
+              }}
+            >
+              {mentorCount}
+            </span>
+          </button>
+
+          {/* Learners Tab */}
+          <button
+            onClick={() => setActiveTab('LEARNER')}
+            style={{
+              padding: '12px 20px',
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              fontWeight: 800,
+              fontSize: '15px',
+              color: activeTab === 'LEARNER' ? '#09090b' : '#71717a',
+              borderBottom: activeTab === 'LEARNER' ? '3px solid #09090b' : '3px solid transparent',
+              marginBottom: '-2px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <UsersIcon size={18} color={activeTab === 'LEARNER' ? '#09090b' : '#71717a'} />
+            Learners
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 800,
+                padding: '2px 8px',
+                borderRadius: '12px',
+                backgroundColor: activeTab === 'LEARNER' ? '#09090b' : '#f4f4f5',
+                color: activeTab === 'LEARNER' ? '#ffffff' : '#71717a'
+              }}
+            >
+              {learnerCount}
+            </span>
+          </button>
+
+          {/* All Users Tab */}
+          <button
+            onClick={() => setActiveTab('ALL')}
+            style={{
+              padding: '12px 20px',
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              fontWeight: 800,
+              fontSize: '15px',
+              color: activeTab === 'ALL' ? '#09090b' : '#71717a',
+              borderBottom: activeTab === 'ALL' ? '3px solid #09090b' : '3px solid transparent',
+              marginBottom: '-2px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            All Accounts
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 800,
+                padding: '2px 8px',
+                borderRadius: '12px',
+                backgroundColor: activeTab === 'ALL' ? '#09090b' : '#f4f4f5',
+                color: activeTab === 'ALL' ? '#ffffff' : '#71717a'
+              }}
+            >
+              {users.length}
+            </span>
+          </button>
+        </div>
+
+        {/* Total Summary pill */}
+        <div style={{ fontSize: '13px', color: '#71717a', fontWeight: 600 }}>
+          Showing <strong style={{ color: '#09090b' }}>{filteredUsers.length}</strong> matching users
+        </div>
+      </div>
+
+      {/* Search Bar & Status Filter */}
+      <div className="glass-card" style={{ padding: '18px 24px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-          {/* Search bar */}
-          <div className="search-input-wrapper" style={{ width: '360px' }}>
+          {/* Dedicated Search Bar */}
+          <div className="search-input-wrapper" style={{ flex: 1, minWidth: '320px', maxWidth: '520px' }}>
             <Search size={16} />
             <input
               type="text"
               className="search-input"
-              placeholder="Search by user name, email, or city..."
+              placeholder={`Search ${activeTab === 'MENTOR' ? 'mentors' : activeTab === 'LEARNER' ? 'learners' : 'users'} by name, login ID, email, or city...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', padding: 0 }}
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          {/* Filters */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Role:</span>
-              <select
-                className="select-input"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value as any)}
-              >
-                <option value="ALL">All Roles ({users.length})</option>
-                <option value="MENTOR">Mentors ({users.filter(u => u.role === 'MENTOR').length})</option>
-                <option value="LEARNER">Learners ({users.filter(u => u.role === 'LEARNER').length})</option>
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Account Status:</span>
-              <select
-                className="select-input"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="ACTIVE">Active</option>
-                <option value="WARNED">Warned for Bad Practice</option>
-                <option value="BLOCKED">Blocked / Stopped</option>
-              </select>
-            </div>
+          {/* Status Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '12px', color: '#71717a', fontWeight: 700, textTransform: 'uppercase' }}>
+              Status:
+            </span>
+            <select
+              className="select-input"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              style={{ fontWeight: 700 }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Active (Normal)</option>
+              <option value="WARNED">Warned</option>
+              <option value="BLOCKED">Blocked / Suspended</option>
+            </select>
           </div>
+
+          {/* Download / Export User Data Action */}
+          <button
+            type="button"
+            id="download-user-data-btn"
+            onClick={() => setIsExportModalOpen(true)}
+            className="btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: '#09090b',
+              color: '#ffffff',
+              fontWeight: 800,
+              fontSize: '13px',
+              padding: '9px 18px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              border: 'none',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Download size={16} color="#10b981" />
+            Download User Data
+          </button>
         </div>
       </div>
 
@@ -104,135 +294,340 @@ export const UserManagement: React.FC<UserManagementProps> = ({
           <table className="admin-table">
             <thead>
               <tr>
-                <th>User Details</th>
-                <th>Role</th>
-                <th>Status & Bad Practice</th>
-                <th>Trust Score</th>
-                <th>Uploads</th>
-                <th>Activity</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th>User / Profile</th>
+                <th>Login ID</th>
+                <th>Role & Type</th>
+                <th>Financials / Activity</th>
+                <th>Status & Safety</th>
+                <th>Trust</th>
+                <th style={{ textAlign: 'right' }}>Moderation & Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    No users match your filter criteria.
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '48px', color: '#71717a', fontWeight: 600 }}>
+                    No {activeTab.toLowerCase()} accounts found matching "{search}".
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map(user => {
                   const isBlocked = user.status === 'BLOCKED' || user.status === 'SUSPENDED';
                   const isWarned = user.status === 'WARNED';
+                  const isMentor = user.role === 'MENTOR';
 
                   return (
-                    <tr key={user.id} style={{ background: isBlocked ? 'rgba(239, 68, 68, 0.04)' : undefined }}>
+                    <tr
+                      key={user.id}
+                      style={{
+                        background: isBlocked ? '#fef2f2' : undefined,
+                        transition: 'background-color 0.15s ease'
+                      }}
+                    >
+                      {/* User Profile Info - Clicking opens details or analytics */}
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.name}
-                            style={{
-                              width: '42px',
-                              height: '42px',
-                              borderRadius: '50%',
-                              objectFit: 'cover',
-                              border: isBlocked ? '2px solid var(--danger)' : '1px solid var(--border-subtle)'
-                            }}
-                          />
+                        <div
+                          style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                          onClick={() => {
+                            if (isMentor) {
+                              setSelectedMentorForAnalytics(user);
+                            } else {
+                              setSelectedUserForDetail(user);
+                            }
+                          }}
+                          title={isMentor ? 'Click to view Growth Analytics' : 'Click to view user details'}
+                        >
+                          <div style={{ position: 'relative' }}>
+                            <img
+                              src={user.avatarUrl}
+                              alt={user.name}
+                              style={{
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: isBlocked ? '2px solid #ef4444' : '2px solid #e4e4e7'
+                              }}
+                            />
+                            {isMentor && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  bottom: -2,
+                                  right: -2,
+                                  backgroundColor: '#10b981',
+                                  color: '#ffffff',
+                                  borderRadius: '50%',
+                                  width: '16px',
+                                  height: '16px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '9px',
+                                  border: '1.5px solid #ffffff'
+                                }}
+                                title="Mentor"
+                              >
+                                ★
+                              </div>
+                            )}
+                          </div>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontWeight: 700, fontSize: '14px' }}>{user.name}</span>
+                              <span style={{ fontWeight: 800, fontSize: '14px', color: '#09090b' }}>
+                                {user.name}
+                              </span>
+                              {isMentor && (
+                                <span
+                                  style={{
+                                    fontSize: '10px',
+                                    fontWeight: 800,
+                                    color: '#065f46',
+                                    backgroundColor: '#ecfdf5',
+                                    padding: '1px 6px',
+                                    borderRadius: '10px'
+                                  }}
+                                >
+                                  Growth Chart
+                                </span>
+                              )}
                             </div>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{user.email}</p>
+                            <p style={{ fontSize: '12px', color: '#71717a', margin: '2px 0 0', fontWeight: 500 }}>
+                              {user.email}
+                            </p>
                           </div>
                         </div>
                       </td>
 
+                      {/* Login ID */}
                       <td>
-                        <span className={`badge badge-${user.role.toLowerCase()}`}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <KeyRound size={13} color="#71717a" />
+                          <code style={{ fontSize: '12px', fontWeight: 700, color: '#09090b', backgroundColor: '#f4f4f5', padding: '2px 6px', borderRadius: '4px' }}>
+                            {user.loginId || user.email.split('@')[0]}
+                          </code>
+                        </div>
+                      </td>
+
+                      {/* Role & Registration */}
+                      <td>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: isMentor ? '#09090b' : '#f4f4f5',
+                            color: isMentor ? '#ffffff' : '#09090b'
+                          }}
+                        >
                           {user.role}
                         </span>
-                      </td>
-
-                      <td>
-                        <div>
-                          <span className={`badge badge-${isBlocked ? 'blocked' : isWarned ? 'warned' : 'active'}`}>
-                            {user.status}
-                          </span>
-                          {user.reasonBlocked && (
-                            <p style={{
-                              fontSize: '11px',
-                              color: isBlocked ? '#fca5a5' : 'var(--warning)',
-                              marginTop: '4px',
-                              maxWidth: '240px',
-                              lineHeight: '1.3'
-                            }}>
-                              ⚠ {user.reasonBlocked}
-                            </p>
-                          )}
+                        <div style={{ fontSize: '11px', color: '#71717a', marginTop: '3px' }}>
+                          Joined {user.joinedDate}
                         </div>
                       </td>
 
+                      {/* Financials / Activity */}
+                      <td>
+                        {isMentor ? (
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 800, color: '#10b981', fontSize: '14px' }}>
+                              <DollarSign size={14} />
+                              ${user.earnings?.totalEarned?.toFixed(2) || '0.00'}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#71717a', marginTop: '2px' }}>
+                              {user.courseSales?.length || 0} sales • {user.uploadsCount} courses
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, color: '#09090b', fontSize: '13px' }}>
+                              <ShoppingBag size={14} color="#71717a" />
+                              {user.purchasedCourses?.length || 0} Courses Bought
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#71717a', marginTop: '2px' }}>
+                              Active learner
+                            </div>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Status & Safety Flag */}
+                      <td>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: isBlocked ? '#fef2f2' : isWarned ? '#fffbeb' : '#ecfdf5',
+                            color: isBlocked ? '#ef4444' : isWarned ? '#b45309' : '#10b981',
+                            border: `1px solid ${isBlocked ? '#fecaca' : isWarned ? '#fde68a' : '#a7f3d0'}`
+                          }}
+                        >
+                          {user.status}
+                        </span>
+                        {user.warningCount > 0 && (
+                          <div style={{ fontSize: '11px', color: '#b45309', fontWeight: 700, marginTop: '3px' }}>
+                            ⚠ {user.warningCount} {user.warningCount === 1 ? 'warning' : 'warnings'}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Trust Score */}
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{
-                            width: '48px',
-                            height: '6px',
-                            borderRadius: '3px',
-                            background: 'var(--bg-input)',
-                            overflow: 'hidden'
-                          }}>
-                            <div style={{
-                              height: '100%',
-                              width: `${user.trustScore}%`,
-                              backgroundColor: user.trustScore > 80 ? 'var(--success)' : user.trustScore > 50 ? 'var(--warning)' : 'var(--danger)'
-                            }} />
+                          <div
+                            style={{
+                              width: '46px',
+                              height: '6px',
+                              borderRadius: '3px',
+                              background: '#e4e4e7',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: '100%',
+                                width: `${user.trustScore}%`,
+                                backgroundColor: user.trustScore > 80 ? '#10b981' : user.trustScore > 50 ? '#f59e0b' : '#ef4444'
+                              }}
+                            />
                           </div>
-                          <span style={{ fontSize: '12px', fontWeight: 700 }}>{user.trustScore}%</span>
+                          <span style={{ fontSize: '12px', fontWeight: 800, color: '#09090b' }}>
+                            {user.trustScore}%
+                          </span>
                         </div>
                       </td>
 
-                      <td>
-                        <span style={{ fontSize: '13px', fontWeight: 600 }}>
-                          {user.uploadsCount} {user.role === 'MENTOR' ? 'Courses' : 'Swaps'}
-                        </span>
-                      </td>
-
-                      <td>
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                          {user.lastActive}
-                        </span>
-                      </td>
-
+                      {/* Actions: Details, Analytics, Warn, Suspend, Block */}
                       <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          {/* Details button */}
                           <button
                             className="btn btn-outline btn-sm"
-                            title="Inspect User Details"
+                            title="View Full Personal Details, Login Credentials & Purchases"
                             onClick={() => setSelectedUserForDetail(user)}
+                            style={{ padding: '5px 9px', fontSize: '11px', fontWeight: 700 }}
                           >
-                            <Eye size={13} />
-                            Inspect
+                            <Eye size={12} />
+                            Details
                           </button>
 
+                          {/* User Growth Analytics button */}
+                          <button
+                            onClick={() => setSelectedMentorForAnalytics(user)}
+                            title="Open Full Screen Growth Analytics"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              backgroundColor: '#ecfdf5',
+                              color: '#065f46',
+                              border: '1px solid #a7f3d0',
+                              padding: '5px 9px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <TrendingUp size={12} color="#10b981" />
+                            Growth
+                          </button>
+
+                          {/* Warning button */}
+                          <button
+                            onClick={() => onWarnUser(user)}
+                            title="Issue Warning for Bad Practice"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              backgroundColor: '#fffbeb',
+                              color: '#b45309',
+                              border: '1px solid #fde68a',
+                              padding: '5px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <AlertTriangle size={12} />
+                            Warn
+                          </button>
+
+                          {/* Suspend button */}
+                          {(onSuspendUser || onDirectModerate) && (
+                            <button
+                              onClick={() => {
+                                if (onSuspendUser) onSuspendUser(user);
+                                else if (onDirectModerate) onDirectModerate(user.id, 'SUSPENDED', '7-day policy suspension');
+                              }}
+                              title="Temporarily Suspend Account"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                backgroundColor: '#fff7ed',
+                                color: '#c2410c',
+                                border: '1px solid #fed7aa',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Clock size={12} />
+                              Suspend
+                            </button>
+                          )}
+
+                          {/* Block / Unblock button */}
                           {isBlocked ? (
                             <button
-                              className="btn btn-success btn-sm"
-                              title="Unblock User Access"
                               onClick={() => onUnblockUser(user.id)}
+                              title="Unblock User Access"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                backgroundColor: '#10b981',
+                                color: '#ffffff',
+                                border: 'none',
+                                padding: '5px 10px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
                             >
-                              <CheckCircle size={13} />
+                              <CheckCircle size={12} />
                               Unblock
                             </button>
                           ) : (
                             <button
-                              className="btn btn-danger btn-sm"
-                              title="Block User from Accessing Account on Bad Practice"
                               onClick={() => onOpenBlockModal(user)}
+                              title="Block User from Platform"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                backgroundColor: '#ef4444',
+                                color: '#ffffff',
+                                border: 'none',
+                                padding: '5px 10px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
                             >
-                              <Ban size={13} />
-                              Block User
+                              <Ban size={12} />
+                              Block
                             </button>
                           )}
                         </div>
@@ -246,133 +641,28 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         </div>
       </div>
 
-      {/* User Details Slide-over Drawer / Modal */}
-      {selectedUserForDetail && (
-        <div className="modal-overlay" onClick={() => setSelectedUserForDetail(null)}>
-          <div className="modal-container" style={{ maxWidth: '620px' }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Shield size={20} color="var(--primary)" />
-                <h3 style={{ fontSize: '17px', fontWeight: 800 }}>User Profile & Safety File</h3>
-              </div>
-              <button className="btn btn-outline" style={{ padding: '6px', borderRadius: '50%' }} onClick={() => setSelectedUserForDetail(null)}>
-                <X size={16} />
-              </button>
-            </div>
+      {/* User Details Modal (Personal info, credentials, eye password toggle, earnings, purchases, moderation) */}
+      <UserDetailsModal
+        user={selectedUserForDetail}
+        isOpen={!!selectedUserForDetail}
+        onClose={() => setSelectedUserForDetail(null)}
+        onOpenAnalytics={(mentor) => setSelectedMentorForAnalytics(mentor)}
+        onModerateUser={handleModerateFromModal}
+      />
 
-            <div className="modal-body">
-              {/* Profile Card */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-                <img
-                  src={selectedUserForDetail.avatarUrl}
-                  alt={selectedUserForDetail.name}
-                  style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h4 style={{ fontSize: '18px', fontWeight: 800 }}>{selectedUserForDetail.name}</h4>
-                    <span className={`badge badge-${selectedUserForDetail.role.toLowerCase()}`}>{selectedUserForDetail.role}</span>
-                  </div>
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{selectedUserForDetail.email}</p>
-                  <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    <span><Phone size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} /> {selectedUserForDetail.phone}</span>
-                    <span><MapPin size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} /> {selectedUserForDetail.location}</span>
-                  </div>
-                </div>
-              </div>
+      {/* Mentor Growth Analytics Drawer (Slide-over graph on mentor profile click) */}
+      <MentorAnalyticsDrawer
+        mentor={selectedMentorForAnalytics}
+        isOpen={!!selectedMentorForAnalytics}
+        onClose={() => setSelectedMentorForAnalytics(null)}
+      />
 
-              {/* Status & Trust Metrics */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '12px',
-                padding: '14px',
-                background: 'rgba(0, 0, 0, 0.25)',
-                borderRadius: '12px',
-                marginBottom: '20px'
-              }}>
-                <div>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>STATUS</span>
-                  <div style={{ marginTop: '4px' }}>
-                    <span className={`badge badge-${selectedUserForDetail.status === 'BLOCKED' ? 'blocked' : selectedUserForDetail.status === 'WARNED' ? 'warned' : 'active'}`}>
-                      {selectedUserForDetail.status}
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>TRUST SCORE</span>
-                  <p style={{ fontSize: '16px', fontWeight: 800, marginTop: '2px', color: selectedUserForDetail.trustScore > 80 ? 'var(--success)' : 'var(--danger)' }}>
-                    {selectedUserForDetail.trustScore}%
-                  </p>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>BAD PRACTICE WARNS</span>
-                  <p style={{ fontSize: '16px', fontWeight: 800, marginTop: '2px', color: selectedUserForDetail.warningCount > 0 ? 'var(--warning)' : 'inherit' }}>
-                    {selectedUserForDetail.warningCount} Strikes
-                  </p>
-                </div>
-              </div>
-
-              {/* Bad practice history */}
-              {selectedUserForDetail.reasonBlocked && (
-                <div style={{
-                  padding: '14px',
-                  borderRadius: '10px',
-                  background: 'rgba(239, 68, 68, 0.12)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  marginBottom: '20px'
-                }}>
-                  <strong style={{ fontSize: '13px', color: 'var(--danger)' }}>Enforced Violation Details:</strong>
-                  <p style={{ fontSize: '13px', color: '#fca5a5', marginTop: '4px' }}>
-                    {selectedUserForDetail.reasonBlocked}
-                  </p>
-                  {selectedUserForDetail.blockedAt && (
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
-                      Enforced on: {selectedUserForDetail.blockedAt}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                <p>Joined platform on {selectedUserForDetail.joinedDate} • Total curriculum uploads: {selectedUserForDetail.uploadsCount} • Completed Swaps: {selectedUserForDetail.swapCount}</p>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setSelectedUserForDetail(null)}>
-                Close
-              </button>
-              {selectedUserForDetail.status === 'BLOCKED' || selectedUserForDetail.status === 'SUSPENDED' ? (
-                <button
-                  className="btn btn-success"
-                  onClick={() => {
-                    onUnblockUser(selectedUserForDetail.id);
-                    setSelectedUserForDetail(null);
-                  }}
-                >
-                  <CheckCircle size={15} />
-                  Restore & Unblock User
-                </button>
-              ) : (
-                <button
-                  className="btn btn-danger"
-                  onClick={() => {
-                    const u = selectedUserForDetail;
-                    setSelectedUserForDetail(null);
-                    onOpenBlockModal(u);
-                  }}
-                >
-                  <Ban size={15} />
-                  Stop / Block User Access
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Download User Data Filtered by Time Periods Modal */}
+      <ExportUserModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        users={users}
+      />
     </div>
   );
 };

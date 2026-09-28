@@ -36,3 +36,19 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 .vscode/
+.last_adb_ip
+
+# Screen captures and debug screenshots
+screen*.png
+screen.png
+*.png.tmp
+
+# Agent and Skill configurations
+.agents/
+.neon
+**/.neon
+skills-lock.json
+powershell.bat
+**/powershell.bat
+**/powershell.cmd
+

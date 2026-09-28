@@ -23,24 +23,25 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-container" style={{ maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-container" style={{ maxWidth: '740px', backgroundColor: '#ffffff' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(99, 102, 241, 0.15)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              backgroundColor: '#ecfdf5',
+              border: '1px solid #a7f3d0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--primary)'
+              color: '#10b981'
             }}>
               <Play size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 800 }}>Admin Video Inspection Player</h3>
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Review uploaded curriculum media for bad practice</p>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#09090b' }}>Admin Video Inspection Player</h3>
+              <p style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Review uploaded curriculum media for bad practice</p>
             </div>
           </div>
           <button onClick={onClose} className="btn btn-outline" style={{ padding: '6px', borderRadius: '50%' }}>
@@ -48,9 +49,9 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
           </button>
         </div>
 
-        <div className="modal-body" style={{ padding: 0 }}>
+        <div className="modal-body" style={{ padding: 0, backgroundColor: '#ffffff' }}>
           {/* HTML5 Video Player */}
-          <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', backgroundColor: '#000' }}>
+          <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', backgroundColor: '#09090b' }}>
             <video
               src={video.videoUrl}
               poster={video.thumbnailUrl}
@@ -60,23 +61,23 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
             />
           </div>
 
-          <div style={{ padding: '20px 24px' }}>
+          <div style={{ padding: '20px 24px', backgroundColor: '#ffffff' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '14px' }}>
               <div>
-                <span className={`badge badge-${video.status === 'APPROVED' ? 'active' : video.status === 'FLAGGED' ? 'warned' : 'blocked'}`}>
+                <span className={`badge badge-${video.status === 'APPROVED' ? 'active' : 'danger'}`}>
                   {video.status}
                 </span>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, marginTop: '8px', color: 'var(--text-primary)' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, marginTop: '8px', color: '#09090b' }}>
                   {video.title}
                 </h2>
-                <p style={{ fontSize: '13px', color: 'var(--primary-light)', marginTop: '2px' }}>
+                <p style={{ fontSize: '13px', color: '#10b981', marginTop: '2px', fontWeight: 700 }}>
                   Course: {video.courseTitle}
                 </p>
               </div>
 
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Uploaded on</span>
-                <p style={{ fontSize: '13px', fontWeight: 700 }}>{video.uploadDate}</p>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Uploaded on</span>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: '#09090b' }}>{video.uploadDate}</p>
               </div>
             </div>
 
@@ -84,18 +85,18 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
             {video.flaggedForBadPractice && (
               <div style={{
                 marginTop: '16px',
-                padding: '12px 14px',
+                padding: '12px 16px',
                 borderRadius: '8px',
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
+                background: '#fef2f2',
+                border: '1.5px solid #fecaca',
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '10px'
               }}>
-                <AlertTriangle size={18} color="var(--danger)" style={{ marginTop: '2px', flexShrink: 0 }} />
+                <AlertTriangle size={18} color="#ef4444" style={{ marginTop: '2px', flexShrink: 0 }} />
                 <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--danger)' }}>Flagged for Bad Practice:</strong>
-                  <p style={{ fontSize: '12px', color: '#fca5a5', marginTop: '2px' }}>
+                  <strong style={{ fontSize: '13px', color: '#b91c1c' }}>Flagged for Bad Practice:</strong>
+                  <p style={{ fontSize: '12px', color: '#b91c1c', marginTop: '2px', fontWeight: 500 }}>
                     {video.flagReason || 'Reported by community users for policy violation or pirated media.'}
                   </p>
                 </div>
@@ -109,29 +110,29 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
               gap: '18px',
               marginTop: '16px',
               padding: '12px 0',
-              borderTop: '1px solid var(--border-subtle)',
-              borderBottom: '1px solid var(--border-subtle)',
+              borderTop: '1px solid #f1f5f9',
+              borderBottom: '1px solid #f1f5f9',
               fontSize: '13px',
-              color: 'var(--text-secondary)'
+              color: '#334155'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <img
                   src={video.mentorAvatar}
                   alt={video.mentorName}
-                  style={{ width: '22px', height: '22px', borderRadius: '50%' }}
+                  style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #e2e8f0' }}
                 />
-                <span>By <strong>{video.mentorName}</strong></span>
+                <span>By <strong style={{ color: '#09090b' }}>{video.mentorName}</strong></span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontWeight: 600 }}>
                 <Eye size={15} />
                 <span>{video.views.toLocaleString()} Views</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontWeight: 600 }}>
                 <ThumbsUp size={15} />
                 <span>{video.likes} Likes</span>
               </div>
-              <div>
-                <span>Duration: <strong>{video.duration}</strong></span>
+              <div style={{ color: '#64748b', fontWeight: 600 }}>
+                <span>Duration: <strong style={{ color: '#09090b' }}>{video.duration}</strong></span>
               </div>
             </div>
           </div>
@@ -149,7 +150,7 @@ export const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
             </button>
           )}
           {video.status !== 'FLAGGED' && (
-            <button className="btn btn-warning" onClick={() => { onFlag(video); onClose(); }}>
+            <button className="btn btn-danger" onClick={() => { onFlag(video); onClose(); }}>
               <AlertTriangle size={15} />
               Flag Bad Practice
             </button>

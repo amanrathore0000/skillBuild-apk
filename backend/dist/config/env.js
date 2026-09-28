@@ -10,5 +10,7 @@ export const ENV = {
     JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
     CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
+    ADMIN_LOGIN_ID: process.env.ADMIN_LOGIN_ID || 'admin',
+    ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH || '',
 };
 //# sourceMappingURL=env.js.map

@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding SkillBuilder MySQL database...');
+  console.log('🌱 Seeding SkillBuilder Neon PostgreSQL database...');
 
   // 1. Clean existing records in reverse dependency order
   await prisma.chatMessage.deleteMany();

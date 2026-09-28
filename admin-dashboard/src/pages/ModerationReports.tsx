@@ -1,7 +1,6 @@
 import React from 'react';
 import { ModerationReport, AdminUser } from '../types/admin';
 import {
-  AlertTriangle,
   CheckCircle2,
   XCircle,
   Ban,
@@ -28,23 +27,24 @@ export const ModerationReports: React.FC<ModerationReportsProps> = ({
 }) => {
   return (
     <div>
-      <div className="glass-card" style={{ padding: '20px 24px', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="glass-card" style={{ padding: '20px 24px', marginBottom: '24px', backgroundColor: '#ffffff', borderTop: '4px solid #ef4444' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
-            background: 'rgba(245, 158, 11, 0.15)',
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
+            background: '#fef2f2',
+            border: '1.5px solid #fecaca',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--warning)'
+            color: '#ef4444'
           }}>
-            <ShieldAlert size={22} />
+            <ShieldAlert size={24} />
           </div>
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800 }}>Community Safety & Bad Practice Queue</h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#09090b' }}>Community Safety & Bad Practice Queue</h3>
+            <p style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>
               Reports filed against users for fraudulent swaps, copyright strikes, or offensive material.
             </p>
           </div>
@@ -61,13 +61,13 @@ export const ModerationReports: React.FC<ModerationReportsProps> = ({
               key={report.id}
               className="glass-card"
               style={{
-                padding: '20px 24px',
-                borderLeft: `4px solid ${
-                  report.severity === 'CRITICAL' ? 'var(--danger)' :
-                  report.severity === 'HIGH' ? '#f97316' :
-                  report.severity === 'MEDIUM' ? 'var(--warning)' : 'var(--info)'
-                }`,
-                opacity: isPending ? 1 : 0.65
+                padding: '22px 24px',
+                backgroundColor: '#ffffff',
+                borderLeft: `5px solid ${isPending ? '#ef4444' : '#10b981'}`,
+                borderTop: '1px solid #e2e8f0',
+                borderRight: '1px solid #e2e8f0',
+                borderBottom: '1px solid #e2e8f0',
+                opacity: isPending ? 1 : 0.75
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
@@ -75,44 +75,46 @@ export const ModerationReports: React.FC<ModerationReportsProps> = ({
                   <img
                     src={report.reportedUserAvatar}
                     alt={report.reportedUserName}
-                    style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                    style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${isPending ? '#fecaca' : '#a7f3d0'}` }}
                   />
 
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <h4 style={{ fontSize: '16px', fontWeight: 800 }}>{report.reportedUserName}</h4>
-                      <span className={`badge badge-${report.severity === 'CRITICAL' || report.severity === 'HIGH' ? 'blocked' : 'warned'}`}>
+                      <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#09090b' }}>{report.reportedUserName}</h4>
+                      <span className={`badge badge-${isPending ? 'danger' : 'active'}`}>
                         {report.severity} PRIORITY
                       </span>
-                      <span className="badge badge-outline" style={{ border: '1px solid var(--border-subtle)' }}>
+                      <span className="badge" style={{ background: '#f8fafc', color: '#334155', border: '1px solid #e2e8f0' }}>
                         {report.type.replace(/_/g, ' ')}
                       </span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        <Clock size={11} style={{ verticalAlign: 'middle', marginRight: '3px' }} />
+                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
+                        <Clock size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} />
                         {report.timestamp}
                       </span>
                     </div>
 
                     {/* Report body */}
-                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', marginTop: '8px', lineHeight: '1.5' }}>
+                    <p style={{ fontSize: '14px', color: '#09090b', marginTop: '10px', lineHeight: '1.5', fontWeight: 500 }}>
                       "{report.description}"
                     </p>
 
                     {/* Target content reference */}
                     <div style={{
-                      marginTop: '10px',
+                      marginTop: '12px',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '8px',
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      background: 'var(--bg-input)',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
                       fontSize: '12px',
-                      color: 'var(--text-secondary)'
+                      color: '#334155',
+                      fontWeight: 600
                     }}>
-                      {report.targetType === 'VIDEO' && <FileVideo size={14} color="var(--primary-light)" />}
-                      {report.targetType === 'CHAT_MESSAGE' && <MessageSquare size={14} color="var(--warning)" />}
-                      <span>Target: <strong>{report.targetContent}</strong></span>
+                      {report.targetType === 'VIDEO' && <FileVideo size={14} color="#10b981" />}
+                      {report.targetType === 'CHAT_MESSAGE' && <MessageSquare size={14} color="#ef4444" />}
+                      <span>Target: <strong style={{ color: '#09090b' }}>{report.targetContent}</strong></span>
                       <span>• Reported by: {report.reporterName}</span>
                     </div>
                   </div>
@@ -147,7 +149,7 @@ export const ModerationReports: React.FC<ModerationReportsProps> = ({
                       </button>
                     </>
                   ) : (
-                    <span className="badge badge-active" style={{ fontSize: '12px', padding: '6px 12px' }}>
+                    <span className="badge badge-active" style={{ fontSize: '12px', padding: '6px 14px' }}>
                       {report.status}
                     </span>
                   )}

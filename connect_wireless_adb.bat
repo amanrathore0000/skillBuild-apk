@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-title Android Wireless Debugging Connector - BitChord
+title Android Wireless Debugging Connector - SkillBuilder
 
 :: Locate ADB executable
 set "ADB=adb"
@@ -26,7 +26,7 @@ if exist "%LAST_IP_FILE%" (
 :MENU
 cls
 echo ================================================================
-echo             BITCHORD - WIRELESS DEBUGGING CONNECTOR
+echo           SKILLBUILDER - WIRELESS DEBUGGING CONNECTOR
 echo ================================================================
 echo.
 echo Make sure your phone and PC are connected to the SAME Wi-Fi network!
@@ -54,7 +54,7 @@ echo   [3] Switch from USB to Wireless ^(adb tcpip 5555^)
 echo   [4] Check Connected Devices ^(adb devices -l^)
 echo   [5] Disconnect all wireless devices
 echo   [6] Restart ADB Server
-echo   [7] Install ^& Launch BitChord on Device ^(gradlew installDevDebug^)
+echo   [7] Install ^& Launch SkillBuilder on Device ^(gradlew installDebug^)
 echo   [8] Exit
 echo ================================================================
 echo.
@@ -277,14 +277,14 @@ if %errorlevel% neq 0 (
     pause
     goto MENU
 )
-echo Device detected! Building and installing devDebug build...
+echo Device detected! Building and installing debug build...
 echo.
 cd /d "%~dp0"
-call gradlew.bat :app:installDevDebug
+call gradlew.bat :app:installDebug
 if %errorlevel% equ 0 (
     echo.
-    echo [SUCCESS] App installed! Launching BitChord...
-    "%ADB%" shell am start -n com.music.bitchord/com.music.bitchord.MainActivity
+    echo [SUCCESS] App installed! Launching SkillBuilder...
+    "%ADB%" shell am start -n com.skillbuilder.app/com.skillbuilder.app.MainActivity
 ) else (
     echo.
     echo [ERROR] Build or installation failed. Check gradle output above.

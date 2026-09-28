@@ -17,7 +17,8 @@ data class User(
     val isVerified: Boolean = true,
     val skillsTaught: List<String> = emptyList(),
     val skillsWanted: List<String> = emptyList(),
-    val isMentor: Boolean = false
+    val isMentor: Boolean = false,
+    val hasActiveSwapPremium: Boolean = false
 )
 
 @Serializable
@@ -54,7 +55,16 @@ data class SwapProposal(
     val partnerSkill: String,
     val status: SwapStatus,
     val proposedDate: String,
-    val message: String
+    val message: String,
+    val isPremiumSwap: Boolean = true,
+    val curriculumTopics: List<String> = emptyList(),
+    val courseOverview: String = "",
+    val sampleVideoUrl: String? = null,
+    val sampleVideoTitle: String? = null,
+    val sampleVideoDuration: String? = null,
+    val sampleVideoThumbnailUrl: String? = null,
+    val compatibilityScore: Int = 96,
+    val isOutgoing: Boolean = false
 )
 
 @Serializable
@@ -76,7 +86,7 @@ data class Course(
     val rating: Float,
     val reviewCount: Int,
     val duration: String,
-    val price: String = "Free with Swap",
+    val price: String = "Free",
     val progressPercent: Int = 0,
     val lessons: List<Lesson> = emptyList()
 )
@@ -99,6 +109,7 @@ data class MentorVideo(
     val likes: Int = 0,
     val price: String = "Free",          // e.g. "₹399", "₹999", "Free"
     val mentorName: String = "Mentor",   // Display name of the uploading mentor
+    val uploaderId: String = "",         // Stable ID of the uploading mentor
     val storageProvider: String = "AWS_S3", // "GOOGLE_DRIVE" or "AWS_S3"
     val driveFileId: String? = null,
     val driveSharingLink: String? = null,
@@ -182,7 +193,10 @@ data class ChatMessage(
     val isEncrypted: Boolean = true,
     val isResolved: Boolean = false, // For doubts
     val isAccepted: Boolean = false, // For video demands
-    val demandVotes: Int = 1         // Upvotes for video requests
+    val demandVotes: Int = 1,        // Upvotes for video requests
+    val attachmentUri: String? = null,
+    val attachmentType: String? = null, // "IMAGE", "VIDEO", "DOCUMENT"
+    val attachmentName: String? = null
 )
 
 @Serializable
@@ -199,6 +213,28 @@ data class ChatConversation(
     val lastMessageTimestamp: String,
     val unreadCount: Int = 0,
     val hasDoubtPending: Boolean = false,
-    val hasVideoDemandPending: Boolean = false
+    val hasVideoDemandPending: Boolean = false,
+    val isMuted: Boolean = false,
+    val subtitleOverride: String? = null
+)
+
+@Serializable
+data class SupportTicket(
+    val id: String,
+    val userId: String,
+    val userName: String,
+    val userEmail: String,
+    val userPhone: String = "",
+    val userRole: String = "LEARNER", // "LEARNER" or "MENTOR"
+    val categoryId: String,
+    val categoryTitle: String,
+    val subject: String,
+    val description: String,
+    val courseName: String? = null,
+    val orderId: String? = null,
+    val priority: String = "MEDIUM", // "LOW", "MEDIUM", "HIGH", "CRITICAL"
+    val status: String = "PENDING", // "PENDING", "IN_REVIEW", "RESOLVED"
+    val createdAt: String,
+    val adminResponse: String? = null
 )
 

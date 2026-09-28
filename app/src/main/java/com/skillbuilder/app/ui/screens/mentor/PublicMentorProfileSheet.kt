@@ -74,7 +74,6 @@ import com.skillbuilder.app.ui.screens.chat.EncryptedChatScreen
 fun PublicMentorProfileSheet(
     mentor: User,
     onDismiss: () -> Unit,
-    onInitiateSwap: (() -> Unit)? = null,
     onVideoClick: ((MentorVideo) -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -399,7 +398,7 @@ fun PublicMentorProfileSheet(
                                 .width(120.dp)
                                 .aspectRatio(16f / 9f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color.Black),
+                                .background(Color(0xFF2B2B2B)),
                             contentAlignment = Alignment.Center
                         ) {
                             if (!video.thumbnailUrl.isNullOrBlank()) {
@@ -418,7 +417,7 @@ fun PublicMentorProfileSheet(
                             )
                             Surface(
                                 shape = RoundedCornerShape(3.dp),
-                                color = Color.Black.copy(alpha = 0.8f),
+                                color = Color(0xFF2B2B2B).copy(alpha = 0.8f),
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
                                     .padding(4.dp)

@@ -3,6 +3,7 @@ package com.skillbuilder.app.ui.screens.home
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,21 +22,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CloudDone
-import androidx.compose.material.icons.rounded.PlayCircleOutline
-import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material.icons.rounded.VideoLibrary
-import com.skillbuilder.app.data.local.UserSession
-import com.skillbuilder.app.data.local.tr
-import com.skillbuilder.app.domain.model.MentorVideo
-import com.skillbuilder.app.domain.model.User
-import com.skillbuilder.app.ui.screens.learn.VideoDetailPlayerScreen
-import com.skillbuilder.app.ui.screens.mentor.PublicMentorProfileSheet
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -56,943 +51,853 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.skillbuilder.app.data.local.AppSettings
+import com.skillbuilder.app.data.local.AppThemeMode
+import com.skillbuilder.app.data.local.CertificateItem
+import com.skillbuilder.app.data.local.DegreeProgramItem
+import com.skillbuilder.app.data.local.ExploreCourseItem
+import com.skillbuilder.app.data.local.ExploreData
+import com.skillbuilder.app.data.local.ExploreTopicItem
 import com.skillbuilder.app.data.local.SampleData
-import com.skillbuilder.app.ui.components.SkillCard
+import com.skillbuilder.app.data.local.UserSession
+import com.skillbuilder.app.domain.model.MentorVideo
+import com.skillbuilder.app.domain.model.User
+import com.skillbuilder.app.ui.screens.mentor.AllMentorsServerScreen
+import com.skillbuilder.app.ui.screens.mentor.FullMentorProfileScreen
+import com.skillbuilder.app.ui.screens.mentor.MentorYouTubeSearchScreen
 
 @Composable
 fun HomeScreen(
-    onNavigateToSwap: () -> Unit,
-    onNavigateToCourse: (String) -> Unit,
+    onNavigateToCareer: () -> Unit = {},
+    onNavigateToCourse: (String) -> Unit = {},
     onNavigateToEnrolled: () -> Unit = {},
-    onOpenVideo: (MentorVideo) -> Unit = {}
+    onOpenVideo: (MentorVideo) -> Unit = {},
+    onOpenSearch: () -> Unit = {}
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("All") }
-
-    val filteredSkills = remember(searchQuery, selectedCategory) {
-        SampleData.skills.filter {
-            (selectedCategory == "All" || it.category == selectedCategory) &&
-                    (searchQuery.isBlank() || it.title.contains(searchQuery, ignoreCase = true) || it.category.contains(searchQuery, ignoreCase = true))
-        }
-    }
-
-    val filteredMentors = remember(searchQuery) {
-        if (searchQuery.isBlank()) SampleData.reciprocalMatches
-        else SampleData.mentors.filter { mentor ->
-            mentor.name.contains(searchQuery, ignoreCase = true) ||
-            mentor.bio.contains(searchQuery, ignoreCase = true) ||
-            mentor.skillsTaught.any { it.contains(searchQuery, ignoreCase = true) } ||
-            mentor.skillsWanted.any { it.contains(searchQuery, ignoreCase = true) }
-        }
-    }
-
-    val user by UserSession.currentUser.collectAsState()
-    val enrolledVideoIds by UserSession.enrolledVideoIds.collectAsState()
+    val topics = remember { ExploreData.topics }
+    val mobileCourses = remember { ExploreData.mobileFocusedCourses }
+    val degrees = remember { ExploreData.degreePrograms }
+    val certs = remember { ExploreData.industryCertifications }
+    val mentors = remember { SampleData.mentors }
     val allVideos by SampleData.allVideosFlow.collectAsState()
-
-    val enrolledVideos = remember(enrolledVideoIds, allVideos) {
-        allVideos.filter { it.id in enrolledVideoIds }
-    }
-
-    val filteredServerVideos = remember(searchQuery, selectedCategory, allVideos) {
-        allVideos.filter { video ->
-            (selectedCategory == "All" || video.category.equals(selectedCategory, ignoreCase = true)) &&
-            (searchQuery.isBlank() ||
-                video.title.contains(searchQuery, ignoreCase = true) ||
-                video.courseTitle.contains(searchQuery, ignoreCase = true) ||
-                video.mentorName.contains(searchQuery, ignoreCase = true) ||
-                video.category.contains(searchQuery, ignoreCase = true))
-        }
-    }
-
+    val currentUser by UserSession.currentUser.collectAsState()
     var selectedMentorForProfile by remember { mutableStateOf<User?>(null) }
-    var selectedVideoForDetail by remember { mutableStateOf<MentorVideo?>(null) }
-
-    val handleVideoClick: (MentorVideo) -> Unit = { video ->
-        onOpenVideo(video)
-    }
+    var isAllMentorsOpen by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // User Greeting Header
+        // ==================== SECTION 1: TOPICS ====================
         item {
             Column {
-                Text(
-                    text = "Welcome back,",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ExploreSectionHeader(
+                    title = "Topics",
+                    actionText = "",
+                    onActionClick = {}
                 )
-                Text(
-                    text = user.name,
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
-        }
-
-        // Search Bar
-        item {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Search skills, mentors, or topics...") },
-                leadingIcon = {
-                    Icon(
-                        Icons.Rounded.Search,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotBlank()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(
-                                Icons.Rounded.Close,
-                                contentDescription = "Clear search",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                ),
-                singleLine = true
-            )
-        }
-
-        if (searchQuery.isNotBlank()) {
-            // ==================== SEARCH RESULTS VIEW ====================
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = "SEARCH RESULTS FOR \"$searchQuery\"",
-                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Clear",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable { searchQuery = "" }
-                    )
-                }
-            }
-
-            // 1. Matching Videos / Courses
-            if (filteredServerVideos.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "COURSES & LESSONS (${filteredServerVideos.size})",
-                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                items(filteredServerVideos) { video ->
-                    val isEnrolled = video.id in enrolledVideoIds
-                    ExploreServerVideoCard(
-                        video = video,
-                        isEnrolled = isEnrolled,
-                        onClick = { handleVideoClick(video) }
-                    )
-                }
-            }
-
-            // 2. Matching Mentors & Swap Partners
-            if (filteredMentors.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "MENTORS & SWAP PARTNERS (${filteredMentors.size})",
-                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                items(filteredMentors) { mentor ->
-                    MentorHighlightCard(
-                        mentor = mentor,
-                        onSwapClick = onNavigateToSwap,
-                        onViewProfile = { selectedMentorForProfile = mentor }
-                    )
-                }
-            }
-
-            // 3. Matching Skills
-            if (filteredSkills.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "MATCHING SKILLS (${filteredSkills.size})",
-                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                items(filteredSkills) { skill ->
-                    SkillCard(
-                        skill = skill,
-                        onClick = onNavigateToSwap
-                    )
-                }
-            }
-
-            // 4. Empty Result State
-            if (filteredServerVideos.isEmpty() && filteredMentors.isEmpty() && filteredSkills.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "No results found for \"$searchQuery\"",
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Try searching with other terms like guitar, baking, design, coding, or a mentor's name.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(
-                                onClick = { searchQuery = "" },
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("Clear Search")
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            // ==================== DEFAULT DASHBOARD ====================
-            // Reciprocal Swap Match Hero Banner
-            item {
-                ReciprocalSwapBanner(onMatchClick = onNavigateToSwap)
-            }
-
-            // Category Filter Chips
-            item {
-                Column {
-                    Text(
-                        text = "CATEGORIES",
-                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(SampleData.categories) { cat ->
-                            val isSelected = selectedCategory == cat.name
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                border = BorderStroke(
-                                    1.dp,
-                                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                                ),
-                                modifier = Modifier.clickable { selectedCategory = cat.name }
-                            ) {
-                                Text(
-                                    text = cat.name,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Featured Mentors
-            item {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "TOP MENTORS",
-                            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Bold
+                    items(topics) { topic ->
+                        TopicChip(
+                            topic = topic,
+                            onClick = onNavigateToCareer
                         )
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(SampleData.reciprocalMatches) { mentor ->
-                            MentorHighlightCard(
-                                mentor = mentor,
-                                onSwapClick = onNavigateToSwap,
-                                onViewProfile = { selectedMentorForProfile = mentor }
-                            )
-                        }
-                    }
                 }
             }
+        }
 
-            // Courses Enrolled Section (replaces Popular Courses On Server from learner interface)
-            item {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Rounded.School,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = tr("COURSES ENROLLED", "नामांकित कोर्सेज"),
-                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (enrolledVideos.isNotEmpty()) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    shape = CircleShape,
-                                    color = Color(0xFF10B981).copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        text = "${enrolledVideos.size}",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                                        color = Color(0xFF10B981),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                        }
-                        Text(
-                            text = tr("View All", "सभी देखें"),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clickable { onNavigateToEnrolled() }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    if (enrolledVideos.isNotEmpty()) {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            items(enrolledVideos) { video ->
-                                Card(
-                                    modifier = Modifier
-                                        .width(230.dp)
-                                        .clickable { handleVideoClick(video) },
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.4f))
-                                ) {
-                                    Column {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(120.dp)
-                                                .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                        ) {
-                                            AsyncImage(
-                                                model = video.thumbnailUrl,
-                                                contentDescription = null,
-                                                modifier = Modifier.fillMaxSize(),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                            Surface(
-                                                shape = RoundedCornerShape(6.dp),
-                                                color = Color.Black.copy(alpha = 0.75f),
-                                                modifier = Modifier
-                                                    .align(Alignment.BottomEnd)
-                                                    .padding(6.dp)
-                                            ) {
-                                                Text(
-                                                    text = video.duration,
-                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                                                    color = Color.White,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                        }
-                                        Column(modifier = Modifier.padding(10.dp)) {
-                                            Text(
-                                                text = video.title,
-                                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = "${video.mentorName} • ${video.category}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Rounded.School,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = tr("No enrolled courses yet", "अभी कोई कोर्स नामांकित नहीं है"),
-                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                                    )
-                                    Text(
-                                        text = tr("Enroll in live server courses or swap skills to start learning!", "सीखना शुरू करने के लिए कोर्सेज में नामांकन करें!"),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Central Server Courses & Videos Section
-            item {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Rounded.CloudDone,
-                                contentDescription = null,
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = tr("LIVE SERVER COURSES & VIDEOS", "लाइव सर्वर कोर्सेज और वीडियो"),
-                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = Color(0xFF10B981).copy(alpha = 0.15f)
-                            ) {
-                                Text(
-                                    text = "${allVideos.size}",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-                                    color = Color(0xFF10B981),
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (filteredServerVideos.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                Icons.Rounded.VideoLibrary,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "No server videos uploaded in this category yet",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+        // ==================== SECTION 2: SKILLBUILDER PLUS BANNER OR MENTOR SERVER COURSE SEARCH ====================
+        item {
+            if (currentUser.isMentor) {
+                MentorSearchEntryBar(
+                    onClick = onOpenSearch
+                )
             } else {
-                items(filteredServerVideos) { video ->
-                    val isEnrolled = video.id in enrolledVideoIds
-                    ExploreServerVideoCard(
-                        video = video,
-                        isEnrolled = isEnrolled,
-                        onClick = { handleVideoClick(video) }
-                    )
+                PlusBanner(onFindOutMore = onNavigateToCareer)
+            }
+        }
+
+        // ==================== SECTION 3: MOBILE FOCUSED COURSES ====================
+        item {
+            Column {
+                ExploreSectionHeader(
+                    title = "Mobile Focused",
+                    actionText = "See All",
+                    onActionClick = onNavigateToCareer
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(mobileCourses) { course ->
+                        ExploreCourseCard(
+                            course = course,
+                            onClick = { onOpenVideo(course.mentorVideo) }
+                        )
+                    }
                 }
             }
+        }
 
-            // Skills Grid/List
-            item {
-                Text(
-                    text = "POPULAR SKILLS FOR SWAP",
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold
+        // ==================== SECTION 4: EARN YOUR DEGREE ====================
+        item {
+            Column {
+                ExploreSectionHeader(
+                    title = "Earn Your Degree",
+                    actionText = "See All",
+                    onActionClick = onNavigateToCareer
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(degrees) { degree ->
+                        DegreeCard(
+                            degree = degree,
+                            onClick = { onOpenVideo(degree.mentorVideo) }
+                        )
+                    }
+                }
             }
+        }
 
-            items(filteredSkills) { skill ->
-                SkillCard(
-                    skill = skill,
-                    onClick = onNavigateToSwap
+        // ==================== SECTION 5: PREPARE FOR INDUSTRY CERTIFICATION ====================
+        item {
+            Column {
+                ExploreSectionHeader(
+                    title = "Prepare for Industry Certification",
+                    actionText = "See All",
+                    onActionClick = onNavigateToCareer
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(certs) { cert ->
+                        CertificationCard(
+                            cert = cert,
+                            onClick = { onOpenVideo(cert.mentorVideo) }
+                        )
+                    }
+                }
+            }
+        }
+
+        // ==================== SECTION 6: COMMUNITY CREATORS & UPLOADED COURSES ====================
+        if (allVideos.isNotEmpty()) {
+            item {
+                Column {
+                    ExploreSectionHeader(
+                        title = "Community Masterclasses",
+                        actionText = "See All",
+                        onActionClick = onNavigateToCareer
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        items(allVideos) { video ->
+                            CommunityVideoCard(
+                                video = video,
+                                onClick = { onOpenVideo(video) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==================== SECTION 7: TOP MENTORS & INSTRUCTORS ====================
+        item {
+            Column {
+                ExploreSectionHeader(
+                    title = "Top Mentors & Instructors",
+                    actionText = "See All",
+                    onActionClick = { isAllMentorsOpen = true }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(mentors) { mentor ->
+                        ExploreMentorCard(
+                            mentor = mentor,
+                            onMentorClick = { selectedMentorForProfile = mentor }
+                        )
+                    }
+                }
             }
         }
     }
 
     selectedMentorForProfile?.let { mentor ->
-        PublicMentorProfileSheet(
+        FullMentorProfileScreen(
             mentor = mentor,
             onDismiss = { selectedMentorForProfile = null },
-            onInitiateSwap = onNavigateToSwap,
-            onVideoClick = { video ->
-                selectedMentorForProfile = null
-                handleVideoClick(video)
-            }
+            onVideoClick = onOpenVideo
         )
     }
 
-    selectedVideoForDetail?.let { video ->
-        VideoDetailPlayerScreen(
-            video = video,
-            onDismiss = { selectedVideoForDetail = null },
-            onNavigateToMyCourses = {
-                selectedVideoForDetail = null
-                onNavigateToCourse("")
-            }
+    if (isAllMentorsOpen) {
+        AllMentorsServerScreen(
+            onDismiss = { isAllMentorsOpen = false },
+            onOpenVideo = onOpenVideo
+        )
+    }
+}
+
+// ==================== UI COMPONENTS ====================
+
+@Composable
+fun ExploreSectionHeader(
+    title: String,
+    actionText: String = "See All",
+    onActionClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            ),
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            text = actionText,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Normal,
+                fontSize = 13.sp
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.clickable { onActionClick() }
         )
     }
 }
 
 @Composable
-private fun ReciprocalSwapBanner(
-    onMatchClick: () -> Unit
+fun TopicChip(
+    topic: ExploreTopicItem,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = topic.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = topic.name,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp
+                ),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
+    }
+}
+
+@Composable
+fun PlusBanner(
+    onFindOutMore: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "skillbuilder",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            fontSize = 18.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = "PLUS",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Black,
+                                fontSize = 10.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "10,000+ courses, 1 price",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Button(
+                onClick = onFindOutMore,
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onBackground
+                ),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "Find out more",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MentorSearchEntryBar(
+    onClick: () -> Unit
+) {
+    val themeMode by AppSettings.themeMode.collectAsState()
+    val systemDark = isSystemInDarkTheme()
+    val isDark = when (themeMode) {
+        AppThemeMode.SYSTEM -> systemDark
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK -> true
+        else -> systemDark
+    }
+
+    val surfaceCard = if (isDark) Color(0xFF383838) else Color(0xFFF8F9FA)
+    val cardBorder = if (isDark) Color(0xFF4A4A4A) else Color(0xFFE5E7EB)
+    val textPrimary = if (isDark) Color(0xFFFFFFFF) else Color(0xFF111827)
+    val textSecondary = if (isDark) Color(0xFFB3B3B3) else Color(0xFF6B7280)
+    val iconTint = if (isDark) Color(0xFF5995E5) else Color(0xFF2464B8)
+    val micBg = if (isDark) Color(0xFF2B2B2B) else Color(0xFFF1F3F5)
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .clip(RoundedCornerShape(26.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(26.dp),
+        color = surfaceCard,
+        border = BorderStroke(1.2.dp, cardBorder)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Search,
+                contentDescription = "Search",
+                tint = iconTint,
+                modifier = Modifier.size(22.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Text(
+                text = "Search courses, topics, mentors...",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal
+                ),
+                color = textSecondary,
+                modifier = Modifier.weight(1f)
+            )
+
+            Surface(
+                shape = CircleShape,
+                color = micBg,
+                modifier = Modifier.size(34.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.Mic,
+                        contentDescription = "Voice Search",
+                        tint = textSecondary,
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ExploreCourseCard(
+    course: ExploreCourseItem,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(185.dp)
+            .clickable { onClick() }
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            MaterialTheme.colorScheme.surface
-                        )
-                    )
-                )
-                .padding(18.dp)
+                .height(115.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Rounded.SwapHoriz,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Text(
-                        text = "RECIPROCAL MATCH FOUND",
-                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Aditi wants your Guitar skills and teaches Artisan Cake Baking!",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = onMatchClick,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            AsyncImage(
+                model = course.thumbnailUrl,
+                contentDescription = course.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            if (!course.orgBadgeText.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = Color(course.orgBadgeColor),
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .align(Alignment.TopStart)
                 ) {
                     Text(
-                        text = "View Swap Proposal",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                        text = course.orgBadgeText,
+                        color = Color(course.orgTextColor),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp
+                        ),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                     )
                 }
             }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = course.title,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                lineHeight = 17.sp
+            ),
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            minLines = 2
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = course.organization,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.outline,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(
+            text = course.type,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.outline
+        )
+        Spacer(modifier = Modifier.height(3.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Rounded.Star,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(12.dp)
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+                text = "${course.rating}",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+                text = "(${course.reviewCount})",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = MaterialTheme.colorScheme.outline
+            )
         }
     }
 }
 
 @Composable
-private fun MentorHighlightCard(
-    mentor: User,
-    onSwapClick: () -> Unit,
-    onViewProfile: () -> Unit
+fun DegreeCard(
+    degree: DegreeProgramItem,
+    onClick: () -> Unit
 ) {
-    Surface(
+    Column(
         modifier = Modifier
-            .width(230.dp)
-            .clickable { onViewProfile() },
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            .width(240.dp)
+            .clickable { onClick() }
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = mentor.name.take(2).uppercase(),
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(130.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            AsyncImage(
+                model = degree.thumbnailUrl,
+                contentDescription = degree.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Surface(
+                shape = RoundedCornerShape(4.dp),
+                color = Color(degree.badgeBgColor),
+                modifier = Modifier
+                    .padding(6.dp)
+                    .align(Alignment.BottomEnd)
+            ) {
+                Text(
+                    text = degree.badgeText,
+                    color = Color(degree.badgeTextColor),
+                    style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                        fontSize = 10.sp
+                    ),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = degree.title,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                lineHeight = 17.sp
+            ),
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            minLines = 2
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = degree.university,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.outline,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun CertificationCard(
+    cert: CertificateItem,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(185.dp)
+            .clickable { onClick() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(115.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            AsyncImage(
+                model = cert.thumbnailUrl,
+                contentDescription = cert.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Surface(
+                shape = RoundedCornerShape(4.dp),
+                color = Color(cert.badgeBgColor),
+                modifier = Modifier
+                    .padding(6.dp)
+                    .align(Alignment.TopStart)
+            ) {
+                Text(
+                    text = cert.badgeText,
+                    color = Color(cert.badgeTextColor),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp
+                    ),
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = cert.title,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                lineHeight = 17.sp
+            ),
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            minLines = 2
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = cert.provider,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.outline,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(
+            text = cert.type,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.outline
+        )
+        Spacer(modifier = Modifier.height(3.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Rounded.Star,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(12.dp)
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+                text = "${cert.rating}",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+                text = "(${cert.reviewCount})",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+    }
+}
+
+@Composable
+fun CommunityVideoCard(
+    video: MentorVideo,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(185.dp)
+            .clickable { onClick() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(115.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            AsyncImage(
+                model = video.thumbnailUrl,
+                contentDescription = video.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = video.title,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                lineHeight = 17.sp
+            ),
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            minLines = 2
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = video.mentorName,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.outline,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(
+            text = "Video Lesson",
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.outline
+        )
+    }
+}
+
+@Composable
+fun ExploreMentorCard(
+    mentor: User,
+    onMentorClick: () -> Unit
+) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val surfaceCard = if (isDark) Color(0xFF1E1E1E) else Color.White
+    val cardBorder = if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0)
+    val activeAccent = if (isDark) Color(0xFF3B82F6) else Color(0xFF2563EB)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    Card(
+        modifier = Modifier
+            .width(220.dp)
+            .clickable { onMentorClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = surfaceCard),
+        border = BorderStroke(1.dp, cardBorder)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = activeAccent.copy(alpha = 0.15f),
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (!mentor.avatarUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = mentor.avatarUrl,
+                                contentDescription = mentor.name,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = mentor.name.take(2).uppercase(),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = activeAccent
+                            )
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
-                    Text(
-                        text = mentor.name,
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.Star,
-                            contentDescription = null,
-                            tint = androidx.compose.ui.graphics.Color(0xFFFFB800),
-                            modifier = Modifier.size(14.dp)
+                        Text(
+                            text = mentor.name,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = textPrimary
                         )
                         Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = "${mentor.rating} (${mentor.reviewCount})",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = "Teaches: ${mentor.skillsTaught.joinToString()}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = "Wants: ${mentor.skillsWanted.joinToString()}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Button(
-                onClick = onViewProfile,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(34.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                    contentColor = MaterialTheme.colorScheme.primary
-                ),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-            ) {
-                Icon(Icons.Rounded.PlayCircleOutline, contentDescription = null, modifier = Modifier.size(15.dp))
-                Spacer(modifier = Modifier.width(5.dp))
-                Text(
-                    text = "Profile & Playlist",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExploreServerVideoCard(
-    video: MentorVideo,
-    isEnrolled: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(
-            1.dp,
-            if (isEnrolled) Color(0xFF10B981).copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
-        )
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
-                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                AsyncImage(
-                    model = video.thumbnailUrl,
-                    contentDescription = video.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-                // Top Left: Price badge
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (video.price == "Free") Color(0xFF10B981) else MaterialTheme.colorScheme.primary
-                ) {
-                    Text(
-                        text = if (video.price == "Free") "FREE" else video.price,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
-                }
-
-                // Top Right: Trial or Enrolled badge
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (isEnrolled) Color(0xFF10B981).copy(alpha = 0.95f) else Color(0xFFF59E0B).copy(alpha = 0.95f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
                         Icon(
-                            imageVector = if (isEnrolled) Icons.Rounded.CheckCircle else Icons.Rounded.PlayCircleOutline,
+                            Icons.Rounded.Verified,
                             contentDescription = null,
-                            tint = if (isEnrolled) Color.White else Color.Black,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (isEnrolled) "ENROLLED" else "30s Trial Preview",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = if (isEnrolled) Color.White else Color.Black,
-                            fontWeight = FontWeight.ExtraBold
+                            tint = activeAccent,
+                            modifier = Modifier.size(13.dp)
                         )
                     }
-                }
-
-                // Bottom End: Duration
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(4.dp),
-                    color = Color.Black.copy(alpha = 0.78f)
-                ) {
                     Text(
-                        text = video.duration,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-
-                // Bottom Start: Category tag
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(4.dp),
-                    color = Color.Black.copy(alpha = 0.65f)
-                ) {
-                    Text(
-                        text = video.category,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        text = "★ ${mentor.rating} (${mentor.reviewCount})",
+                        fontSize = 11.sp,
+                        color = textSecondary
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Offers: ${mentor.skillsTaught.joinToString(", ")}",
+                fontSize = 11.sp,
+                color = textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Column(modifier = Modifier.padding(14.dp)) {
-                Text(
-                    text = video.title,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (video.courseTitle.isNotBlank() && !video.courseTitle.equals(video.title, ignoreCase = true)) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Course: ${video.courseTitle}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
+            // Square card styled "View Profile" button adhering to app color shades
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (isDark) Color(0xFF262626) else Color(0xFFF1F5F9),
+                border = BorderStroke(1.dp, if (isDark) Color(0xFF3E3E3E) else Color(0xFFCBD5E1)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onMentorClick() }
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = video.mentorName.take(1).uppercase(),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = video.mentorName,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "${video.views} views",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "•",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = video.uploadDate,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Rounded.Person,
+                        contentDescription = null,
+                        tint = activeAccent,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "View Profile",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isDark) Color.White else Color(0xFF1E293B)
+                    )
                 }
             }
         }
     }
 }
-

@@ -35,8 +35,8 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -201,33 +201,6 @@ private fun IntroPageContent(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Branded Logo Presentation
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-                            )
-                        )
-                    )
-                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.app_logo),
-                    contentDescription = "Skill Builder Logo",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
 
             // App Name Pill
             Surface(
@@ -248,7 +221,7 @@ private fun IntroPageContent(
 
             // Main Tagline
             Text(
-                text = "Learn Skill. Swap Skill. Build Together.",
+                text = "Learn Skill. Master Skill. Build Together.",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
                     lineHeight = 32.sp
@@ -273,9 +246,9 @@ private fun IntroPageContent(
 
             // Highlights
             IntroFeatureItem(
-                icon = Icons.Rounded.SwapHoriz,
-                title = "Reciprocal Skill Barter",
-                description = "Teach what you love, and learn what you desire without cash barriers."
+                icon = Icons.Rounded.School,
+                title = "Expert Mentor Guidance",
+                description = "Connect with experienced mentors and industry experts to accelerate your skills."
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -378,7 +351,7 @@ private fun GuidelinesPageContent(
             title = "Don't Share Personal Information",
             description = "Never share passwords, OTPs, financial details, home addresses, or private contact information with others.",
             icon = Icons.Rounded.Lock,
-            tint = Color(0xFFEF4444)
+            tint = Color(0xFF2464B8)
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -416,7 +389,7 @@ private fun GuidelinesPageContent(
         GuidelineRuleCard(
             number = "5",
             title = "Verify Before You Trust",
-            description = "Check community ratings, mentor reviews, and verified badges before agreeing to high-commitment swaps or collaborations.",
+            description = "Check community ratings, mentor reviews, and verified badges before enrolling or collaborating with mentors.",
             icon = Icons.Rounded.VerifiedUser,
             tint = Color(0xFF10B981)
         )

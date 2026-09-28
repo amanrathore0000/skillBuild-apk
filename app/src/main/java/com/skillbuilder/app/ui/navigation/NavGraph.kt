@@ -7,14 +7,22 @@ import androidx.navigation.compose.composable
 import com.skillbuilder.app.auth.GoogleAuthClient
 import com.skillbuilder.app.data.local.UserSession
 import com.skillbuilder.app.ui.screens.auth.AuthScreen
+import com.skillbuilder.app.ui.screens.auth.ForgotPasswordScreen
 import com.skillbuilder.app.ui.screens.auth.IntroGuidelinesScreen
 import com.skillbuilder.app.ui.screens.auth.RegisterScreen
 import com.skillbuilder.app.ui.screens.dashboard.MainDashboardScreen
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 sealed interface Screen {
     @Serializable
+    data object Splash : Screen
+
+    @Serializable
     data object Auth : Screen
+
+    @Serializable
+    data object ForgotPassword : Screen
 
     @Serializable
     data object IntroGuidelines : Screen
@@ -27,9 +35,6 @@ sealed interface Screen {
 
     @Serializable
     data class CourseDetail(val courseId: String) : Screen
-
-    @Serializable
-    data class SwapDetail(val swapId: String) : Screen
 }
 
 @Composable
@@ -37,25 +42,51 @@ fun SkillBuilderNavGraph(
     navController: NavHostController,
     googleAuthClient: GoogleAuthClient
 ) {
-    val startDestination: Screen = if (UserSession.isUserLoggedIn()) {
-        Screen.MainDashboard
-    } else {
-        Screen.Auth
-    }
-
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = Screen.Splash
     ) {
+
+        composable<Screen.Splash> {
+            com.skillbuilder.app.ui.screens.splash.SplashScreen(
+                onSplashFinished = {
+                    val target: Screen = if (UserSession.isUserLoggedIn()) {
+                        Screen.MainDashboard
+                    } else {
+                        Screen.Auth
+                    }
+                    navController.navigate(target) {
+                        popUpTo<Screen.Splash> { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable<Screen.Auth> {
             AuthScreen(
                 googleAuthClient = googleAuthClient,
                 onNavigateToRegister = {
                     navController.navigate(Screen.IntroGuidelines)
                 },
+                onNavigateToForgotPassword = {
+                    navController.navigate(Screen.ForgotPassword)
+                },
                 onLoginSuccess = {
                     navController.navigate(Screen.MainDashboard) {
                         popUpTo<Screen.Auth> { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable<Screen.ForgotPassword> {
+            ForgotPasswordScreen(
+                onNavigateBackToLogin = {
+                    navController.popBackStack()
+                },
+                onResetSuccess = {
+                    navController.navigate(Screen.Auth) {
+                        popUpTo<Screen.Auth> { inclusive = false }
                     }
                 }
             )
@@ -89,8 +120,12 @@ fun SkillBuilderNavGraph(
         }
 
         composable<Screen.MainDashboard> {
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
             MainDashboardScreen(
                 onLogout = {
+                    scope.launch {
+                        googleAuthClient.signOut()
+                    }
                     UserSession.clear()
                     navController.navigate(Screen.Auth) {
                         popUpTo<Screen.MainDashboard> { inclusive = true }
