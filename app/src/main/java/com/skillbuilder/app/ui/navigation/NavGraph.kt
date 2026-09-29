@@ -66,7 +66,7 @@ fun SkillBuilderNavGraph(
             AuthScreen(
                 googleAuthClient = googleAuthClient,
                 onNavigateToRegister = {
-                    navController.navigate(Screen.IntroGuidelines)
+                    navController.navigate(Screen.Register)
                 },
                 onNavigateToForgotPassword = {
                     navController.navigate(Screen.ForgotPassword)
@@ -124,9 +124,8 @@ fun SkillBuilderNavGraph(
             MainDashboardScreen(
                 onLogout = {
                     scope.launch {
-                        googleAuthClient.signOut()
+                        UserSession.logout(googleAuthClient)
                     }
-                    UserSession.clear()
                     navController.navigate(Screen.Auth) {
                         popUpTo<Screen.MainDashboard> { inclusive = true }
                     }

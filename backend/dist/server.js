@@ -9,6 +9,8 @@ import { ENV } from './config/env.js';
 import { connectDatabase } from './config/database.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { setupWebSocket } from './websocket/socket.server.js';
+import { toNodeHandler } from 'better-auth/node';
+import { auth } from './auth.js';
 // Import Route Handlers
 import { authRouter } from './modules/auth/auth.routes.js';
 import { usersRouter } from './modules/users/users.routes.js';
@@ -38,6 +40,8 @@ app.get('/health', (req, res) => {
         adminPortal: '/admin',
     });
 });
+// Mount Better Auth Route Handler (/api/auth/*)
+app.all('/api/auth/*', toNodeHandler(auth));
 // API Routes Mounting
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', usersRouter);

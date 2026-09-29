@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
         StoragePlanManager.initialize(this)
         AppSettings.initialize(this)
         com.skillbuilder.app.data.local.RealTimeDataManager.initialize(this)
+        com.skillbuilder.app.data.local.SearchHistoryManager.initialize(this)
 
         setContent {
             val themeMode by AppSettings.themeMode.collectAsState()

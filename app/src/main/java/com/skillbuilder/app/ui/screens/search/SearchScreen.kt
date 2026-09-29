@@ -69,15 +69,12 @@ fun SearchScreen(
     var selectedCategory by remember { mutableStateOf("All") }
     val focusManager = LocalFocusManager.current
 
-    val searchHistory = remember {
-        mutableStateListOf(
-            "Android Jetpack Compose",
-            "Business English Workplace",
-            "Data Analytics",
-            "Acoustic Guitar Basics",
-            "Stanford Writing"
-        )
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.skillbuilder.app.data.local.SearchHistoryManager.initialize(context)
     }
+
+    val searchHistory by com.skillbuilder.app.data.local.SearchHistoryManager.searchHistory.collectAsState()
 
     val allVideos by SampleData.allVideosFlow.collectAsState()
     val allCourses = remember { ExploreData.mobileFocusedCourses }
@@ -113,9 +110,7 @@ fun SearchScreen(
     val onPerformSearch: (String) -> Unit = { query ->
         val trimmed = query.trim()
         if (trimmed.isNotBlank()) {
-            if (trimmed !in searchHistory) {
-                searchHistory.add(0, trimmed)
-            }
+            com.skillbuilder.app.data.local.SearchHistoryManager.addSearchQuery(trimmed)
             searchQuery = trimmed
             focusManager.clearFocus()
         }
@@ -256,9 +251,12 @@ fun SearchScreen(
                     )
                     Text(
                         text = "Clear All",
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.clickable { searchHistory.clear() }
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable {
+                            com.skillbuilder.app.data.local.SearchHistoryManager.clearAll()
+                            searchQuery = ""
+                        }
                     )
                 }
             }
@@ -286,7 +284,7 @@ fun SearchScreen(
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(
-                            onClick = { searchHistory.remove(historyItem) },
+                            onClick = { com.skillbuilder.app.data.local.SearchHistoryManager.removeSearchQuery(historyItem) },
                             modifier = Modifier.size(24.dp)
                         ) {
                             Icon(

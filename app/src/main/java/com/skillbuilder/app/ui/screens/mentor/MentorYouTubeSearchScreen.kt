@@ -78,6 +78,7 @@ import com.skillbuilder.app.data.local.AppSettings
 import com.skillbuilder.app.data.local.AppThemeMode
 import com.skillbuilder.app.data.local.ExploreData
 import com.skillbuilder.app.data.local.SampleData
+import com.skillbuilder.app.data.local.SearchHistoryManager
 import com.skillbuilder.app.domain.model.MentorVideo
 
 @Composable
@@ -89,6 +90,10 @@ fun MentorYouTubeSearchScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        SearchHistoryManager.initialize(context)
+    }
 
     // Adaptive Theme Resolution strictly aligned with app design system (Obsidian Dark & Alabaster Light)
     val themeMode by AppSettings.themeMode.collectAsState()
@@ -119,16 +124,7 @@ fun MentorYouTubeSearchScreen(
     var isShowingResults by remember { mutableStateOf(false) }
     var selectedCategoryFilter by remember { mutableStateOf("All") }
 
-    val recentSearches = remember {
-        mutableStateListOf(
-            "Kotlin & Jetpack Compose",
-            "Cloud Architecture & AWS",
-            "Python Machine Learning",
-            "Full-Stack Web Development",
-            "UI/UX Design with Figma",
-            "Acoustic Guitar Basics"
-        )
-    }
+    val recentSearches by SearchHistoryManager.searchHistory.collectAsState()
 
     val trendingSearches = remember {
         listOf(
@@ -171,9 +167,7 @@ fun MentorYouTubeSearchScreen(
         val trimmed = queryText.trim()
         if (trimmed.isNotBlank()) {
             searchQuery = trimmed
-            if (trimmed !in recentSearches) {
-                recentSearches.add(0, trimmed)
-            }
+            SearchHistoryManager.addSearchQuery(trimmed)
             keyboardController?.hide()
             isShowingResults = true
         }
@@ -399,7 +393,10 @@ fun MentorYouTubeSearchScreen(
                                     color = activeAccent,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.clickable { recentSearches.clear() }
+                                    modifier = Modifier.clickable {
+                                        SearchHistoryManager.clearAll()
+                                        searchQuery = ""
+                                    }
                                 )
                             }
                         }
@@ -410,7 +407,8 @@ fun MentorYouTubeSearchScreen(
                                 iconTint = textSecondary,
                                 textColor = textPrimary,
                                 onSelect = { executeSearch(historyItem) },
-                                onArrowClick = { searchQuery = historyItem }
+                                onArrowClick = { searchQuery = historyItem },
+                                onRemove = { SearchHistoryManager.removeSearchQuery(historyItem) }
                             )
                         }
                     }
@@ -693,7 +691,8 @@ private fun YouTubeSearchSuggestionRow(
     iconTint: Color,
     textColor: Color,
     onSelect: () -> Unit,
-    onArrowClick: () -> Unit
+    onArrowClick: () -> Unit,
+    onRemove: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -718,6 +717,19 @@ private fun YouTubeSearchSuggestionRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
+        if (onRemove != null) {
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = "Remove",
+                    tint = iconTint.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
         IconButton(
             onClick = onArrowClick,
             modifier = Modifier.size(28.dp)

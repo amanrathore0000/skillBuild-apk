@@ -11,8 +11,10 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
+    "prisma:push:force": "prisma db push --accept-data-loss",
     "prisma:seed": "tsx prisma/seed.ts",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "auth:generate": "better-auth generate --config ./src/auth.ts --output ./prisma/schema.prisma -y"
   },
   "keywords": [
     "skillbuilder",
@@ -27,21 +29,28 @@
   "author": "SkillBuilder Team",
   "license": "MIT",
   "dependencies": {
+    "@better-auth/core": "^1.7.6",
+    "@better-auth/passkey": "^1.7.6",
     "@neon/config": "^1.7.2",
     "@neon/env": "^1.4.3",
     "@prisma/client": "^6.4.1",
+    "@types/nodemailer": "^8.0.2",
     "bcryptjs": "^2.4.3",
+    "better-auth": "^1.7.6",
+    "better-call": "^1.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "google-auth-library": "^9.15.1",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "nodemailer": "^10.0.12",
     "socket.io": "^4.8.1",
     "uuid": "^11.1.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@better-auth/cli": "^1.4.22",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",

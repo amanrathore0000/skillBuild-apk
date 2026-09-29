@@ -266,7 +266,7 @@ goto MENU
 :INSTALL_APP
 cls
 echo ================================================================
-echo              INSTALL & RUN BITCHORD ON DEVICE
+echo              INSTALL & RUN SKILLBUILDER ON DEVICE
 echo ================================================================
 echo.
 echo Checking connected devices...

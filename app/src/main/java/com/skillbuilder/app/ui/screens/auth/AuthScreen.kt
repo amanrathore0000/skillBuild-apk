@@ -1,6 +1,8 @@
 package com.skillbuilder.app.ui.screens.auth
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
@@ -63,11 +65,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
 import com.skillbuilder.app.R
+import com.skillbuilder.app.auth.DeveloperErrorInfo
 import com.skillbuilder.app.auth.GoogleAuthClient
 import com.skillbuilder.app.auth.GoogleAuthResult
 import com.skillbuilder.app.data.local.UserAccountRepository
 import com.skillbuilder.app.data.local.UserSession
+import com.skillbuilder.app.ui.components.GoogleConfigErrorDialog
 import kotlinx.coroutines.launch
 
 @Composable
@@ -88,6 +93,44 @@ fun AuthScreen(
 
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var developerErrorInfo by remember { mutableStateOf<DeveloperErrorInfo?>(null) }
+    var showDevDialog by remember { mutableStateOf(false) }
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isLoading = true
+        errorMessage = null
+        coroutineScope.launch {
+            when (val authResult = googleAuthClient.handleSignInResult(result.data)) {
+                is GoogleAuthResult.Success -> {
+                    val backendRes = UserSession.authenticateWithGoogle(authResult.user, isMentor = false)
+                    isLoading = false
+                    backendRes.onSuccess { user ->
+                        Toast.makeText(
+                            context,
+                            "Welcome back, ${user.name}!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        onLoginSuccess()
+                    }.onFailure { err ->
+                        errorMessage = err.message ?: "Google Sign-In failed. Please try again."
+                    }
+                }
+                is GoogleAuthResult.Canceled -> {
+                    isLoading = false
+                }
+                is GoogleAuthResult.Failure -> {
+                    isLoading = false
+                    errorMessage = authResult.errorMessage
+                    if (authResult.developerErrorInfo != null) {
+                        developerErrorInfo = authResult.developerErrorInfo
+                        showDevDialog = true
+                    }
+                }
+            }
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -136,18 +179,30 @@ fun AuthScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 12.dp),
+                            .padding(bottom = 12.dp)
+                            .clickable(enabled = developerErrorInfo != null) {
+                                showDevDialog = true
+                            },
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(
-                            text = errorMessage ?: "",
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(12.dp)
-                        )
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = errorMessage ?: "",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            if (developerErrorInfo != null) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Tap here to view SHA-1 key & instructions or test with demo account →",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -277,32 +332,11 @@ fun AuthScreen(
                 Button(
                     onClick = {
                         if (!isLoading) {
-                            isLoading = true
                             errorMessage = null
-                            coroutineScope.launch {
-                                when (val result = googleAuthClient.signInWithGoogle()) {
-                                    is GoogleAuthResult.Success -> {
-                                        isLoading = false
-                                        val loginResult = UserSession.loginWithGoogle(result.user)
-                                        loginResult.onSuccess { user ->
-                                            Toast.makeText(
-                                                context,
-                                                "Welcome back, ${user.name}!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            onLoginSuccess()
-                                        }.onFailure { err ->
-                                            errorMessage = err.message ?: "Google Sign-In failed. Please try again."
-                                        }
-                                    }
-                                    is GoogleAuthResult.Canceled -> {
-                                        isLoading = false
-                                    }
-                                    is GoogleAuthResult.Failure -> {
-                                        isLoading = false
-                                        errorMessage = "Google Sign-In: ${result.errorMessage}"
-                                    }
-                                }
+                            try {
+                                googleSignInLauncher.launch(googleAuthClient.getSignInIntent())
+                            } catch (e: Exception) {
+                                errorMessage = "Could not open Google Sign-In: ${e.message}"
                             }
                         }
                     },
@@ -311,10 +345,10 @@ fun AuthScreen(
                         .height(52.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSurface
+                        containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color(0xFF1E1E1E) else Color.White,
+                        contentColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.White else Color(0xFF1F1F1F)
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    border = BorderStroke(1.dp, if (androidx.compose.foundation.isSystemInDarkTheme()) Color(0xFF444444) else Color(0xFFCCCCCC))
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -330,10 +364,11 @@ fun AuthScreen(
                             GoogleGIcon()
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = stringResource(R.string.continue_with_google),
+                                text = "Continue with Google",
                                 style = MaterialTheme.typography.labelLarge.copy(
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 15.sp
+                                    fontSize = 15.sp,
+                                    color = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.White else Color(0xFF1F1F1F)
                                 )
                             )
                         }
@@ -379,6 +414,31 @@ fun AuthScreen(
                 )
             }
         }
+    }
+
+    if (showDevDialog && developerErrorInfo != null) {
+        GoogleConfigErrorDialog(
+            errorInfo = developerErrorInfo!!,
+            onDismiss = { showDevDialog = false },
+            onUseDemoAccount = {
+                isLoading = true
+                coroutineScope.launch {
+                    val demoUser = googleAuthClient.createDemoGoogleUser()
+                    val res = UserSession.authenticateWithGoogle(demoUser, isMentor = false)
+                    isLoading = false
+                    res.onSuccess { user ->
+                        Toast.makeText(
+                            context,
+                            "Welcome, ${user.name}! (Demo Google Account)",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        onLoginSuccess()
+                    }.onFailure { err ->
+                        errorMessage = err.message ?: "Sign in failed"
+                    }
+                }
+            }
+        )
     }
 }
 

@@ -91,6 +91,7 @@ fun HomeScreen(
     val currentUser by UserSession.currentUser.collectAsState()
     var selectedMentorForProfile by remember { mutableStateOf<User?>(null) }
     var isAllMentorsOpen by remember { mutableStateOf(false) }
+    var selectedRelatedCourses by remember { mutableStateOf<RelatedCoursesArgs?>(null) }
 
     LazyColumn(
         modifier = Modifier
@@ -104,8 +105,14 @@ fun HomeScreen(
             Column {
                 ExploreSectionHeader(
                     title = "Topics",
-                    actionText = "",
-                    onActionClick = {}
+                    actionText = "See All",
+                    onActionClick = {
+                        selectedRelatedCourses = RelatedCoursesArgs(
+                            type = RelatedCourseType.ALL,
+                            title = "All Explore Courses",
+                            subtitle = "Browse all topics and learning tracks"
+                        )
+                    }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
@@ -114,7 +121,14 @@ fun HomeScreen(
                     items(topics) { topic ->
                         TopicChip(
                             topic = topic,
-                            onClick = onNavigateToCareer
+                            onClick = {
+                                selectedRelatedCourses = RelatedCoursesArgs(
+                                    type = RelatedCourseType.TOPIC,
+                                    title = "${topic.name} Courses",
+                                    subtitle = "Curated learning paths in ${topic.name}",
+                                    topicFilter = topic.categoryFilter
+                                )
+                            }
                         )
                     }
                 }
@@ -128,7 +142,13 @@ fun HomeScreen(
                     onClick = onOpenSearch
                 )
             } else {
-                PlusBanner(onFindOutMore = onNavigateToCareer)
+                PlusBanner(onFindOutMore = {
+                    selectedRelatedCourses = RelatedCoursesArgs(
+                        type = RelatedCourseType.ALL,
+                        title = "SkillBuilder Plus Courses",
+                        subtitle = "Courses included with your membership"
+                    )
+                })
             }
         }
 
@@ -138,7 +158,13 @@ fun HomeScreen(
                 ExploreSectionHeader(
                     title = "Mobile Focused",
                     actionText = "See All",
-                    onActionClick = onNavigateToCareer
+                    onActionClick = {
+                        selectedRelatedCourses = RelatedCoursesArgs(
+                            type = RelatedCourseType.MOBILE_FOCUSED,
+                            title = "Mobile Focused Courses",
+                            subtitle = "Hands-on Android, iOS, Flutter & React Native"
+                        )
+                    }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
@@ -160,7 +186,13 @@ fun HomeScreen(
                 ExploreSectionHeader(
                     title = "Earn Your Degree",
                     actionText = "See All",
-                    onActionClick = onNavigateToCareer
+                    onActionClick = {
+                        selectedRelatedCourses = RelatedCoursesArgs(
+                            type = RelatedCourseType.DEGREES,
+                            title = "Earn Your Degree",
+                            subtitle = "Accredited bachelor's, master's & postgraduate diplomas"
+                        )
+                    }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
@@ -182,7 +214,13 @@ fun HomeScreen(
                 ExploreSectionHeader(
                     title = "Prepare for Industry Certification",
                     actionText = "See All",
-                    onActionClick = onNavigateToCareer
+                    onActionClick = {
+                        selectedRelatedCourses = RelatedCoursesArgs(
+                            type = RelatedCourseType.CERTIFICATIONS,
+                            title = "Industry Certifications",
+                            subtitle = "Industry credentials recognized by top tech employers"
+                        )
+                    }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
@@ -205,7 +243,13 @@ fun HomeScreen(
                     ExploreSectionHeader(
                         title = "Community Masterclasses",
                         actionText = "See All",
-                        onActionClick = onNavigateToCareer
+                        onActionClick = {
+                            selectedRelatedCourses = RelatedCoursesArgs(
+                                type = RelatedCourseType.COMMUNITY_MASTERCLASSES,
+                                title = "Community Masterclasses",
+                                subtitle = "Interactive tutorials uploaded by verified creators"
+                            )
+                        }
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     LazyRow(
@@ -256,6 +300,14 @@ fun HomeScreen(
     if (isAllMentorsOpen) {
         AllMentorsServerScreen(
             onDismiss = { isAllMentorsOpen = false },
+            onOpenVideo = onOpenVideo
+        )
+    }
+
+    selectedRelatedCourses?.let { args ->
+        RelatedCoursesScreen(
+            args = args,
+            onDismiss = { selectedRelatedCourses = null },
             onOpenVideo = onOpenVideo
         )
     }

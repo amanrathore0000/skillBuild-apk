@@ -62,10 +62,11 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
-    // Google Authentication (Credential Manager)
+    // Google Authentication (Credential Manager & Google Play Services Auth)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.google.identity.googleid)
+    implementation(libs.play.services.auth)
 
     // Dependency Injection (Hilt)
     implementation(libs.hilt.android)

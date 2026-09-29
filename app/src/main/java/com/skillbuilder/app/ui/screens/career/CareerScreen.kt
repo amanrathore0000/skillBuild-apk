@@ -51,6 +51,9 @@ import com.skillbuilder.app.data.local.SampleData
 import com.skillbuilder.app.domain.model.MentorVideo
 import com.skillbuilder.app.domain.model.User
 import com.skillbuilder.app.ui.screens.mentor.PublicMentorProfileSheet
+import com.skillbuilder.app.ui.screens.home.RelatedCoursesScreen
+import com.skillbuilder.app.ui.screens.home.RelatedCoursesArgs
+import com.skillbuilder.app.ui.screens.home.RelatedCourseType
 
 @Composable
 fun CareerScreen(
@@ -60,6 +63,7 @@ fun CareerScreen(
     val certs = remember { ExploreData.industryCertifications }
     val mentors = remember { SampleData.mentors }
     var selectedMentorForProfile by remember { mutableStateOf<User?>(null) }
+    var selectedRelatedCourses by remember { mutableStateOf<RelatedCoursesArgs?>(null) }
 
     LazyColumn(
         modifier = Modifier
@@ -115,8 +119,15 @@ fun CareerScreen(
                 )
                 Text(
                     text = "See All",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable {
+                        selectedRelatedCourses = RelatedCoursesArgs(
+                            type = RelatedCourseType.DEGREES,
+                            title = "Earn Your Degree",
+                            subtitle = "Accredited bachelor's, master's & postgraduate diplomas"
+                        )
+                    }
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -195,8 +206,15 @@ fun CareerScreen(
                 )
                 Text(
                     text = "See All",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable {
+                        selectedRelatedCourses = RelatedCoursesArgs(
+                            type = RelatedCourseType.CERTIFICATIONS,
+                            title = "Industry Certifications",
+                            subtitle = "Prepare for in-demand professional credentials & job roles"
+                        )
+                    }
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -373,6 +391,14 @@ fun CareerScreen(
             mentor = mentor,
             onDismiss = { selectedMentorForProfile = null },
             onVideoClick = onOpenVideo
+        )
+    }
+
+    selectedRelatedCourses?.let { args ->
+        RelatedCoursesScreen(
+            args = args,
+            onDismiss = { selectedRelatedCourses = null },
+            onOpenVideo = onOpenVideo
         )
     }
 }

@@ -4,8 +4,17 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.skillbuilder.app.auth.GoogleUserData
 import com.skillbuilder.app.domain.model.User
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 class UserAccountRepository(context: Context) {
 
@@ -165,6 +174,7 @@ class UserAccountRepository(context: Context) {
         saveAccounts(accounts)
         val user = updated.toUser()
         setActiveUser(user)
+        syncGoogleUserAsync(googleUser)
         return Result.success(user)
     }
 
@@ -186,6 +196,7 @@ class UserAccountRepository(context: Context) {
             saveAccounts(accounts)
             val user = updated.toUser()
             setActiveUser(user)
+            syncGoogleUserAsync(googleUser)
             return Result.success(user)
         }
 
@@ -213,7 +224,37 @@ class UserAccountRepository(context: Context) {
         saveAccounts(accounts)
         val user = userAccount.toUser()
         setActiveUser(user)
+        syncGoogleUserAsync(googleUser)
         return Result.success(user)
+    }
+
+    private fun syncGoogleUserAsync(googleUser: GoogleUserData) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(4, TimeUnit.SECONDS)
+                    .build()
+
+                val payload = JSONObject().apply {
+                    put("idToken", googleUser.idToken.ifBlank { "google_sync_${googleUser.email}" })
+                    put("email", googleUser.email)
+                    put("name", googleUser.displayName ?: "")
+                    if (!googleUser.profilePictureUri.isNullOrBlank()) {
+                        put("picture", googleUser.profilePictureUri)
+                    }
+                }.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+
+                val candidateUrls = listOf("http://localhost:5000", "http://192.168.29.198:5000", "http://10.0.2.2:5000")
+                for (url in candidateUrls) {
+                    try {
+                        val req = Request.Builder().url("$url/api/v1/auth/google").post(payload).build()
+                        val response = client.newCall(req).execute()
+                        response.close()
+                        break
+                    } catch (_: Exception) {}
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     @Synchronized

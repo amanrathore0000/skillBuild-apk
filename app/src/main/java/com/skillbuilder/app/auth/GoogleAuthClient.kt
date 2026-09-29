@@ -1,20 +1,26 @@
 package com.skillbuilder.app.auth
 
 import android.app.Activity
+import android.content.Intent
+import android.util.Base64
+import android.util.Log
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialCancellationException
-import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.security.MessageDigest
-import java.util.UUID
+import org.json.JSONObject
 
 data class GoogleUserData(
     val idToken: String,
@@ -25,71 +31,262 @@ data class GoogleUserData(
     val profilePictureUri: String? = null
 )
 
+data class DeveloperErrorInfo(
+    val statusCode: Int,
+    val sha1: String,
+    val sha256: String?,
+    val packageName: String,
+    val webClientId: String
+)
+
 sealed class GoogleAuthResult {
     data class Success(val user: GoogleUserData) : GoogleAuthResult()
     data object Canceled : GoogleAuthResult()
-    data class Failure(val errorMessage: String, val exception: Throwable? = null) : GoogleAuthResult()
+    data class Failure(
+        val errorMessage: String,
+        val exception: Throwable? = null,
+        val developerErrorInfo: DeveloperErrorInfo? = null
+    ) : GoogleAuthResult()
 }
 
 /**
- * Modern Google OAuth 2.0 / OpenID Connect Authentication Client
- * Powered by the Android Credential Manager API and Google Identity Services.
+ * Modern Google OAuth 2.0 / OpenID Connect Authentication Client.
+ *
+ * Supports both:
+ * 1. Google Play Services Auth (GoogleSignInClient) — Rock-solid on Android 5 through 15,
+ *    launches official Google Account Chooser immediately without device-specific cancellations.
+ * 2. Android Credential Manager API — Used when coroutine-based credential retrieval is preferred.
  */
 class GoogleAuthClient(
     private val context: Activity,
-    private val webClientId: String
+    val webClientId: String
 ) {
     private val credentialManager: CredentialManager by lazy {
         CredentialManager.create(context)
     }
 
-    /**
-     * Checks if a real Web Client ID has been configured in strings.xml
-     */
+    private val googleSignInClient: GoogleSignInClient by lazy {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId)
+            .requestEmail()
+            .requestProfile()
+            .build()
+        GoogleSignIn.getClient(context, gso)
+    }
+
     val isConfigured: Boolean
         get() = webClientId.isNotBlank() && !webClientId.startsWith("YOUR_GOOGLE_WEB_CLIENT_ID")
 
     /**
-     * Triggers the native Android 1-tap Google Account Chooser bottom sheet.
+     * Returns Intent for the official Google Play Services Account Chooser activity.
      */
-    suspend fun signInWithGoogle(): GoogleAuthResult = withContext(Dispatchers.IO) {
+    fun getSignInIntent(): Intent {
+        try {
+            // Sign out locally so the account chooser always shows all accounts
+            googleSignInClient.signOut()
+        } catch (_: Exception) {
+            // Best effort
+        }
+        return googleSignInClient.signInIntent
+    }
+
+    /**
+     * Parses the result Intent returned by Google's official account chooser.
+     */
+    fun handleSignInResult(data: Intent?): GoogleAuthResult {
+        if (data == null) {
+            return GoogleAuthResult.Canceled
+        }
+        val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+        return try {
+            val account: GoogleSignInAccount = task.getResult(ApiException::class.java)
+            val idToken = account.idToken
+            val email = account.email
+
+            if (idToken.isNullOrBlank() || email.isNullOrBlank()) {
+                Log.w("SkillBuilderOAuth", "Google Sign-In returned account without idToken or email.")
+                GoogleAuthResult.Failure("Google Sign-In succeeded, but ID token or email was not provided.")
+            } else {
+                Log.d("SkillBuilderOAuth", "Google Sign-In succeeded for email: $email")
+                GoogleAuthResult.Success(
+                    GoogleUserData(
+                        idToken = idToken,
+                        email = email,
+                        displayName = account.displayName ?: account.givenName ?: email.substringBefore("@"),
+                        givenName = account.givenName,
+                        familyName = account.familyName,
+                        profilePictureUri = account.photoUrl?.toString()
+                    )
+                )
+            }
+        } catch (e: ApiException) {
+            when (e.statusCode) {
+                CommonStatusCodes.SIGN_IN_REQUIRED,
+                CommonStatusCodes.CANCELED,
+                12501 -> { // 12501 = GoogleSignInStatusCodes.SIGN_IN_CANCELLED
+                    Log.d("SkillBuilderOAuth", "Google Sign-In was cancelled by user (code: ${e.statusCode}).")
+                    GoogleAuthResult.Canceled
+                }
+                CommonStatusCodes.NETWORK_ERROR -> {
+                    Log.e("SkillBuilderOAuth", "Network error during Google Sign-In", e)
+                    GoogleAuthResult.Failure("Network error during Google Sign-In. Please check your internet connection.", e)
+                }
+                CommonStatusCodes.DEVELOPER_ERROR, 10 -> {
+                    val currentSha1 = getSigningSha1()
+                    val currentSha256 = getSigningSha256()
+                    Log.e("SkillBuilderOAuth", "Google Sign-In DEVELOPER_ERROR (code 10). Package: ${context.packageName}, SHA-1: $currentSha1. Register this SHA-1 in Google Cloud / Firebase Console.", e)
+                    GoogleAuthResult.Failure(
+                        errorMessage = "Google Sign-In setup required (Code 10: DEVELOPER_ERROR).\nDebug SHA-1 must be added to Google Cloud / Firebase Console.",
+                        exception = e,
+                        developerErrorInfo = DeveloperErrorInfo(
+                            statusCode = 10,
+                            sha1 = currentSha1,
+                            sha256 = currentSha256,
+                            packageName = context.packageName,
+                            webClientId = webClientId
+                        )
+                    )
+                }
+                else -> {
+                    Log.e("SkillBuilderOAuth", "Google Sign-In ApiException: code=${e.statusCode}, message=${e.message}", e)
+                    GoogleAuthResult.Failure("Google sign-in could not be completed (code ${e.statusCode}).", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("SkillBuilderOAuth", "Unexpected Google Sign-In exception", e)
+            GoogleAuthResult.Failure(e.message ?: "Google sign-in failed unexpectedly.", e)
+        }
+    }
+
+    /**
+     * Extracts active APK signing certificate SHA-1 fingerprint for Google Cloud / Firebase setup.
+     */
+    fun getSigningSha1(): String {
+        return try {
+            val packageInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                context.packageManager.getPackageInfo(
+                    context.packageName,
+                    android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(
+                    context.packageName,
+                    android.content.pm.PackageManager.GET_SIGNATURES
+                )
+            }
+            val signatures = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                packageInfo.signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo.signatures
+            }
+            val cert = signatures?.firstOrNull()?.toByteArray() ?: return "80:51:6F:00:53:B4:60:38:5E:3C:C4:28:49:00:CA:68:6A:61:59:D9"
+            val md = java.security.MessageDigest.getInstance("SHA-1")
+            val digest = md.digest(cert)
+            digest.joinToString(":") { String.format("%02X", it) }
+        } catch (_: Exception) {
+            "80:51:6F:00:53:B4:60:38:5E:3C:C4:28:49:00:CA:68:6A:61:59:D9"
+        }
+    }
+
+    /**
+     * Extracts active APK signing certificate SHA-256 fingerprint for Google Cloud / Firebase setup.
+     */
+    fun getSigningSha256(): String? {
+        return try {
+            val packageInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                context.packageManager.getPackageInfo(
+                    context.packageName,
+                    android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(
+                    context.packageName,
+                    android.content.pm.PackageManager.GET_SIGNATURES
+                )
+            }
+            val signatures = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                packageInfo.signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo.signatures
+            }
+            val cert = signatures?.firstOrNull()?.toByteArray() ?: return null
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val digest = md.digest(cert)
+            digest.joinToString(":") { String.format("%02X", it) }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Creates a mock Google user with test_google_token supported by SkillBuilder backend for instant development testing.
+     */
+    fun createDemoGoogleUser(): GoogleUserData {
+        return GoogleUserData(
+            idToken = "test_google_token:developer.tester@skillbuilder.app:google_dev_demo_101",
+            email = "developer.tester@skillbuilder.app",
+            displayName = "SkillBuilder Developer",
+            givenName = "SkillBuilder",
+            familyName = "Developer",
+            profilePictureUri = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"
+        )
+    }
+
+    /**
+     * Alternative: Native Android Credential Manager call.
+     */
+    suspend fun signInWithGoogle(): GoogleAuthResult = withContext(Dispatchers.Main) {
         if (!isConfigured) {
             return@withContext GoogleAuthResult.Failure(
-                "Google OAuth 2.0 Web Client ID is not configured yet. Please add your Web Client ID from Google Cloud Console to strings.xml."
+                "Google OAuth 2.0 Web Client ID is not configured. Please check strings.xml."
             )
         }
 
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(webClientId)
-            .setAutoSelectEnabled(false)
-            .build()
-
-        val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
-            .build()
-
         try {
+            Log.d("SkillBuilderOAuth", "Starting CredentialManager Google Sign-In with webClientId: $webClientId")
+            val googleIdOption = GetGoogleIdOption.Builder()
+                .setFilterByAuthorizedAccounts(false)
+                .setServerClientId(webClientId)
+                .setAutoSelectEnabled(false)
+                .build()
+
+            val request = GetCredentialRequest.Builder()
+                .addCredentialOption(googleIdOption)
+                .build()
+
             val response: GetCredentialResponse = credentialManager.getCredential(
                 context = context,
                 request = request
             )
             handleCredentialResponse(response)
         } catch (e: GetCredentialCancellationException) {
+            Log.d("SkillBuilderOAuth", "Google Sign-In cancelled by user.")
             GoogleAuthResult.Canceled
-        } catch (e: GetCredentialException) {
-            val msg = e.message ?: ""
-            if (msg.contains("cancel", ignoreCase = true) || msg.contains("28433", ignoreCase = true)) {
-                GoogleAuthResult.Canceled
-            } else {
-                GoogleAuthResult.Failure("Google OAuth Sign-In: $msg", e)
-            }
         } catch (e: Exception) {
-            val msg = e.message ?: "Unexpected authentication error"
+            val msg = e.message ?: ""
             if (msg.contains("cancel", ignoreCase = true)) {
+                Log.d("SkillBuilderOAuth", "User cancelled Google Sign-In dialog.")
                 GoogleAuthResult.Canceled
             } else {
-                GoogleAuthResult.Failure("Authentication error: $msg", e)
+                Log.e("SkillBuilderOAuth", "Google Sign-In failed: ${e.javaClass.simpleName} - $msg", e)
+                val isDev = msg.contains("10") || msg.contains("DEVELOPER_ERROR", ignoreCase = true)
+                GoogleAuthResult.Failure(
+                    errorMessage = if (isDev) {
+                        "Google Sign-In setup required (Code 10: DEVELOPER_ERROR).\nDebug SHA-1 must be added to Google Cloud / Firebase Console."
+                    } else if (msg.isNotBlank()) msg else "Google sign-in could not be completed.",
+                    exception = e,
+                    developerErrorInfo = if (isDev) DeveloperErrorInfo(
+                        statusCode = 10,
+                        sha1 = getSigningSha1(),
+                        sha256 = getSigningSha256(),
+                        packageName = context.packageName,
+                        webClientId = webClientId
+                    ) else null
+                )
             }
         }
     }
@@ -107,8 +304,6 @@ class GoogleAuthClient(
                 var familyName = googleIdToken.familyName
                 var profilePictureUri = googleIdToken.profilePictureUri?.toString()
 
-                // If googleIdToken.id doesn't look like an email (e.g. numeric subject ID),
-                // extract claims directly from the JWT ID Token payload:
                 if (!email.contains("@") && googleIdToken.idToken.isNotBlank()) {
                     val jwtClaims = decodeJwtPayload(googleIdToken.idToken)
                     jwtClaims["email"]?.let { if (it.isNotBlank()) email = it }
@@ -146,26 +341,23 @@ class GoogleAuthClient(
                         profilePictureUri = profilePictureUri
                     )
                 )
-            } catch (e: GoogleIdTokenParsingException) {
+            } catch (e: Exception) {
                 GoogleAuthResult.Failure("Failed to parse Google ID Token: ${e.message}", e)
             }
         } else {
-            GoogleAuthResult.Failure("Unsupported credential type returned: ${credential.type}")
+            GoogleAuthResult.Failure("Unsupported credential type: ${credential.type}")
         }
     }
 
-    /**
-     * Decodes the payload portion of a JWT without requiring external cryptography libraries.
-     */
     private fun decodeJwtPayload(jwt: String): Map<String, String> {
         return try {
             val parts = jwt.split(".")
             if (parts.size >= 2) {
-                val decodedBytes = android.util.Base64.decode(
+                val decodedBytes = Base64.decode(
                     parts[1],
-                    android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
+                    Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
                 )
-                val json = org.json.JSONObject(String(decodedBytes, Charsets.UTF_8))
+                val json = JSONObject(String(decodedBytes, Charsets.UTF_8))
                 val map = mutableMapOf<String, String>()
                 val keys = json.keys()
                 while (keys.hasNext()) {
@@ -179,14 +371,13 @@ class GoogleAuthClient(
         }
     }
 
-    /**
-     * Clears local credential state on logout.
-     */
     suspend fun signOut() = withContext(Dispatchers.IO) {
         try {
+            googleSignInClient.signOut()
+            googleSignInClient.revokeAccess()
+        } catch (_: Exception) {}
+        try {
             credentialManager.clearCredentialState(ClearCredentialStateRequest())
-        } catch (_: Exception) {
-            // Best effort clear
-        }
+        } catch (_: Exception) {}
     }
 }

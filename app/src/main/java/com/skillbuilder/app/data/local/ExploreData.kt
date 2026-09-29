@@ -203,6 +203,87 @@ object ExploreData {
                 mentorName = "Aman Rathore",
                 price = "Free with SkillBuilder"
             )
+        ),
+        ExploreCourseItem(
+            id = "c_flutter_dart",
+            title = "Flutter & Dart Complete Masterclass",
+            organization = "Google Developers",
+            type = "Course",
+            rating = 4.9f,
+            reviewCount = "6.1k",
+            thumbnailUrl = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600",
+            orgBadgeText = "FL",
+            orgBadgeColor = 0xFF02569B,
+            orgTextColor = 0xFFFFFFFF,
+            mentorVideo = MentorVideo(
+                id = "c_flutter_dart",
+                title = "Flutter & Dart Complete Masterclass",
+                courseTitle = "Cross-Platform Mobile Engineering",
+                duration = "27:40",
+                views = 6100,
+                videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                uploadDate = "3 days ago",
+                thumbnailUrl = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600",
+                description = "Build beautiful, natively compiled applications for iOS and Android with single codebase Dart and Flutter widgets.",
+                category = "Tech & Coding",
+                level = "Intermediate",
+                mentorName = "Google Developer Experts",
+                price = "Free with SkillBuilder"
+            )
+        ),
+        ExploreCourseItem(
+            id = "c_react_native",
+            title = "React Native: Production Mobile Apps",
+            organization = "Meta Open Source",
+            type = "Course",
+            rating = 4.8f,
+            reviewCount = "7.8k",
+            thumbnailUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600",
+            orgBadgeText = "RN",
+            orgBadgeColor = 0xFF61DAFB,
+            orgTextColor = 0xFF20232A,
+            mentorVideo = MentorVideo(
+                id = "c_react_native",
+                title = "React Native: Production Mobile Apps",
+                courseTitle = "Modern Mobile UI & Architecture",
+                duration = "23:50",
+                views = 7800,
+                videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+                uploadDate = "1 week ago",
+                thumbnailUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600",
+                description = "Leverage your React knowledge to build high-performance mobile applications with native bridges and gestures.",
+                category = "Tech & Coding",
+                level = "Advanced",
+                mentorName = "Meta Engineers",
+                price = "Free with SkillBuilder"
+            )
+        ),
+        ExploreCourseItem(
+            id = "c_swift_ios",
+            title = "iOS 18 & SwiftUI Architecture Bootcamp",
+            organization = "Apple Training Network",
+            type = "Course",
+            rating = 4.9f,
+            reviewCount = "8.9k",
+            thumbnailUrl = "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600",
+            orgBadgeText = "APL",
+            orgBadgeColor = 0xFF000000,
+            orgTextColor = 0xFFFFFFFF,
+            mentorVideo = MentorVideo(
+                id = "c_swift_ios",
+                title = "iOS 18 & SwiftUI Architecture Bootcamp",
+                courseTitle = "SwiftUI & SwiftData Essentials",
+                duration = "30:15",
+                views = 8900,
+                videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+                uploadDate = "4 days ago",
+                thumbnailUrl = "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600",
+                description = "Craft fluid user experiences, spatial designs, and reactive state pipelines using SwiftUI and Swift 6.",
+                category = "Tech & Coding",
+                level = "All Levels",
+                mentorName = "Apple Certified Mentors",
+                price = "Free with SkillBuilder"
+            )
         )
     )
 
@@ -302,6 +383,54 @@ object ExploreData {
                 mentorName = "Ira A. Fulton Schools of Engineering",
                 price = "Accredited Degree"
             )
+        ),
+        DegreeProgramItem(
+            id = "deg_msds_boulder",
+            title = "Master of Science in Data Science (MS-DS)",
+            university = "University of Colorado Boulder",
+            thumbnailUrl = "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=600",
+            badgeText = "CU",
+            badgeBgColor = 0xFFCFB87C,
+            badgeTextColor = 0xFF000000,
+            mentorVideo = MentorVideo(
+                id = "deg_msds_boulder",
+                title = "Statistical Machine Learning & Deep Neural Nets",
+                courseTitle = "MS-DS - CU Boulder",
+                duration = "29:10",
+                views = 11200,
+                videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                uploadDate = "2 weeks ago",
+                thumbnailUrl = "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=600",
+                description = "Interdisciplinary degree blending statistics, computer science, and data engineering to solve real-world industry challenges.",
+                category = "Tech & Coding",
+                level = "Master's Degree",
+                mentorName = "CU Boulder Faculty",
+                price = "Accredited Degree"
+            )
+        ),
+        DegreeProgramItem(
+            id = "deg_bca_online",
+            title = "Bachelor of Computer Applications (BCA)",
+            university = "BITS Pilani Online",
+            thumbnailUrl = "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600",
+            badgeText = "BITS",
+            badgeBgColor = 0xFF003366,
+            badgeTextColor = 0xFFFFFFFF,
+            mentorVideo = MentorVideo(
+                id = "deg_bca_online",
+                title = "Full-Stack Software Engineering & Database Systems",
+                courseTitle = "BCA - BITS Pilani",
+                duration = "33:20",
+                views = 16700,
+                videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+                uploadDate = "1 month ago",
+                thumbnailUrl = "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600",
+                description = "World-class computer science foundational degree covering algorithms, object-oriented design, web systems, and cloud databases.",
+                category = "Tech & Coding",
+                level = "Bachelor's Degree",
+                mentorName = "BITS Computer Science Board",
+                price = "Accredited Degree"
+            )
         )
     )
 
@@ -381,6 +510,84 @@ object ExploreData {
                 category = "Tech & Coding",
                 level = "Professional Certificate",
                 mentorName = "Meta Staff Engineers",
+                price = "Free with SkillBuilder"
+            )
+        ),
+        CertificateItem(
+            id = "cert_ibm_cyber",
+            title = "IBM Cybersecurity Analyst Professional Certificate",
+            provider = "IBM",
+            rating = 4.8f,
+            reviewCount = "42k",
+            thumbnailUrl = "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600",
+            badgeText = "IBM",
+            badgeBgColor = 0xFF1F70C1,
+            badgeTextColor = 0xFFFFFFFF,
+            mentorVideo = MentorVideo(
+                id = "cert_ibm_cyber",
+                title = "Threat Intelligence, SIEM & Incident Response",
+                courseTitle = "IBM Cybersecurity Analyst Certificate",
+                duration = "24:30",
+                views = 42000,
+                videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+                uploadDate = "3 weeks ago",
+                thumbnailUrl = "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600",
+                description = "Learn cybersecurity tools and concepts including SIEM, endpoint protection, cryptography, network analysis, and compliance.",
+                category = "Tech & Coding",
+                level = "Professional Certificate",
+                mentorName = "IBM Security Learning Services",
+                price = "Free with SkillBuilder"
+            )
+        ),
+        CertificateItem(
+            id = "cert_azure_fundamentals",
+            title = "Microsoft Azure Fundamentals (AZ-900)",
+            provider = "Microsoft",
+            rating = 4.9f,
+            reviewCount = "68k",
+            thumbnailUrl = "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600",
+            badgeText = "MSFT",
+            badgeBgColor = 0xFF0078D4,
+            badgeTextColor = 0xFFFFFFFF,
+            mentorVideo = MentorVideo(
+                id = "cert_azure_fundamentals",
+                title = "Azure Core Services, Security & Governance",
+                courseTitle = "Microsoft Azure Certification Track",
+                duration = "22:50",
+                views = 68000,
+                videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+                uploadDate = "2 weeks ago",
+                thumbnailUrl = "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=600",
+                description = "Master foundational cloud concepts, Azure compute, networking, security, privacy, and SLA management.",
+                category = "Tech & Coding",
+                level = "Beginner",
+                mentorName = "Microsoft Certified Trainers",
+                price = "Free with SkillBuilder"
+            )
+        ),
+        CertificateItem(
+            id = "cert_deep_learning",
+            title = "Deep Learning Specialization",
+            provider = "DeepLearning.AI",
+            rating = 4.9f,
+            reviewCount = "95k",
+            thumbnailUrl = "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600",
+            badgeText = "AI",
+            badgeBgColor = 0xFF7C3AED,
+            badgeTextColor = 0xFFFFFFFF,
+            mentorVideo = MentorVideo(
+                id = "cert_deep_learning",
+                title = "Neural Networks, CNNs, Sequence Models & Transformers",
+                courseTitle = "Deep Learning Specialization",
+                duration = "35:40",
+                views = 95000,
+                videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                uploadDate = "1 month ago",
+                thumbnailUrl = "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600",
+                description = "Break into AI with Andrew Ng. Build and train neural networks, CNNs, RNNs, and modern transformer architectures.",
+                category = "Tech & Coding",
+                level = "Intermediate",
+                mentorName = "DeepLearning.AI & Andrew Ng",
                 price = "Free with SkillBuilder"
             )
         )

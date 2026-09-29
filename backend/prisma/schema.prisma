@@ -1,3 +1,4 @@
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -58,38 +59,46 @@ enum StorageProvider {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  googleId     String?   @unique @map("google_id")
-  email        String    @unique
-  passwordHash String?   @map("password_hash")
+  id           String   @id @default(uuid())
+  googleId     String?  @unique @map("google_id")
+  email        String   @unique
+  passwordHash String?  @map("password_hash")
   name         String
-  avatarUrl    String?   @map("avatar_url")
-  phone        String    @default("")
-  dob          String    @default("")
-  location     String    @default("")
-  bio          String?   @db.Text
-  rating       Decimal   @default(5.00) @db.Decimal(3, 2)
-  reviewCount  Int       @default(0) @map("review_count")
-  isVerified   Boolean   @default(true) @map("is_verified")
-  isMentor     Boolean   @default(false) @map("is_mentor")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  avatarUrl    String?  @map("avatar_url")
+  phone        String   @default("")
+  dob          String   @default("")
+  location     String   @default("")
+  bio          String?  @db.Text
+  rating       Decimal  @default(5.00) @db.Decimal(3, 2)
+  reviewCount  Int      @default(0) @map("review_count")
+  isVerified   Boolean  @default(true) @map("is_verified")
+  isMentor     Boolean  @default(false) @map("is_mentor")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   userSkills           UserSkill[]
-  sentProposals        SwapProposal[]     @relation("SentSwaps")
-  receivedProposals    SwapProposal[]     @relation("ReceivedSwaps")
+  sentProposals        SwapProposal[]        @relation("SentSwaps")
+  receivedProposals    SwapProposal[]        @relation("ReceivedSwaps")
   courses              Course[]
   enrollments          Enrollment[]
   lessonProgress       LessonProgress[]
-  mentorConversations  Conversation[]     @relation("MentorConversations")
-  learnerConversations Conversation[]     @relation("LearnerConversations")
-  sentMessages         ChatMessage[]      @relation("SentMessages")
-  receivedMessages     ChatMessage[]      @relation("ReceivedMessages")
+  mentorConversations  Conversation[]        @relation("MentorConversations")
+  learnerConversations Conversation[]        @relation("LearnerConversations")
+  sentMessages         ChatMessage[]         @relation("SentMessages")
+  receivedMessages     ChatMessage[]         @relation("ReceivedMessages")
   wallet               MentorWallet?
   walletTransactions   WalletTransaction[]
-  reviewsGiven         Review[]           @relation("ReviewsGiven")
-  reviewsReceived      Review[]           @relation("ReviewsReceived")
+  reviewsGiven         Review[]              @relation("ReviewsGiven")
+  reviewsReceived      Review[]              @relation("ReviewsReceived")
   storageSubscriptions StorageSubscription[]
+
+  emailVerified Boolean   @default(false)
+  image         String?
+  sessions      Session[]
+  accounts      Account[]
+  twoFactorEnabled Boolean?    @default(false)
+  twofactors       TwoFactor[]
+  passkeys         Passkey[]
 
   @@map("users")
 }
@@ -107,18 +116,18 @@ model Category {
 }
 
 model Skill {
-  id          String      @id @default(uuid())
-  categoryId  String      @map("category_id")
+  id          String     @id @default(uuid())
+  categoryId  String     @map("category_id")
   title       String
-  description String?     @db.Text
-  level       SkillLevel  @default(ALL_LEVELS)
-  mentorCount Int         @default(0) @map("mentor_count")
-  createdAt   DateTime    @default(now()) @map("created_at")
+  description String?    @db.Text
+  level       SkillLevel @default(ALL_LEVELS)
+  mentorCount Int        @default(0) @map("mentor_count")
+  createdAt   DateTime   @default(now()) @map("created_at")
 
-  category          Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  userSkills        UserSkill[]
-  sentInSwaps       SwapProposal[] @relation("SenderSkills")
-  receivedInSwaps   SwapProposal[] @relation("ReceiverSkills")
+  category        Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  userSkills      UserSkill[]
+  sentInSwaps     SwapProposal[] @relation("SenderSkills")
+  receivedInSwaps SwapProposal[] @relation("ReceiverSkills")
 
   @@index([title])
   @@map("skills")
@@ -162,21 +171,21 @@ model SwapProposal {
 }
 
 model Course {
-  id          String           @id @default(uuid())
-  mentorId    String           @map("mentor_id")
-  categoryId  String           @map("category_id")
-  title       String
-  description String?          @db.Text
-  thumbnailUrl String?         @map("thumbnail_url")
-  level       SkillLevel       @default(ALL_LEVELS)
-  visibility  CourseVisibility @default(PUBLIC)
-  priceType   PriceType        @default(FREE_WITH_SWAP) @map("price_type")
-  priceAmount Decimal          @default(0.00) @db.Decimal(10, 2) @map("price_amount")
-  duration    String           @default("0m")
-  rating      Decimal          @default(5.00) @db.Decimal(3, 2)
-  reviewCount Int              @default(0) @map("review_count")
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
+  id           String           @id @default(uuid())
+  mentorId     String           @map("mentor_id")
+  categoryId   String           @map("category_id")
+  title        String
+  description  String?          @db.Text
+  thumbnailUrl String?          @map("thumbnail_url")
+  level        SkillLevel       @default(ALL_LEVELS)
+  visibility   CourseVisibility @default(PUBLIC)
+  priceType    PriceType        @default(FREE_WITH_SWAP) @map("price_type")
+  priceAmount  Decimal          @default(0.00) @db.Decimal(10, 2) @map("price_amount")
+  duration     String           @default("0m")
+  rating       Decimal          @default(5.00) @db.Decimal(3, 2)
+  reviewCount  Int              @default(0) @map("review_count")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
 
   mentor      User         @relation(fields: [mentorId], references: [id], onDelete: Cascade)
   category    Category     @relation(fields: [categoryId], references: [id])
@@ -188,8 +197,8 @@ model Course {
 }
 
 model Lesson {
-  id              String   @id @default(uuid())
-  courseId        String   @map("course_id")
+  id              String          @id @default(uuid())
+  courseId        String          @map("course_id")
   title           String
   duration        String
   durationSeconds Int             @default(0) @map("duration_seconds")
@@ -208,12 +217,12 @@ model Lesson {
 }
 
 model Enrollment {
-  id             String   @id @default(uuid())
-  userId         String   @map("user_id")
-  courseId       String   @map("course_id")
-  progressPercent Int     @default(0) @map("progress_percent")
-  enrolledAt     DateTime @default(now()) @map("enrolled_at")
-  lastAccessedAt DateTime @updatedAt @map("last_accessed_at")
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  courseId        String   @map("course_id")
+  progressPercent Int      @default(0) @map("progress_percent")
+  enrolledAt      DateTime @default(now()) @map("enrolled_at")
+  lastAccessedAt  DateTime @updatedAt @map("last_accessed_at")
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -238,15 +247,15 @@ model LessonProgress {
 }
 
 model Conversation {
-  id                    String    @id @default(uuid())
-  mentorId              String    @map("mentor_id")
-  learnerId             String    @map("learner_id")
-  swapId                String?   @map("swap_id")
-  lastMessage           String?   @db.Text @map("last_message")
-  lastMessageTimestamp  DateTime  @default(now()) @map("last_message_timestamp")
-  hasDoubtPending       Boolean   @default(false) @map("has_doubt_pending")
-  hasVideoDemandPending Boolean   @default(false) @map("has_video_demand_pending")
-  createdAt             DateTime  @default(now()) @map("created_at")
+  id                    String   @id @default(uuid())
+  mentorId              String   @map("mentor_id")
+  learnerId             String   @map("learner_id")
+  swapId                String?  @map("swap_id")
+  lastMessage           String?  @db.Text @map("last_message")
+  lastMessageTimestamp  DateTime @default(now()) @map("last_message_timestamp")
+  hasDoubtPending       Boolean  @default(false) @map("has_doubt_pending")
+  hasVideoDemandPending Boolean  @default(false) @map("has_video_demand_pending")
+  createdAt             DateTime @default(now()) @map("created_at")
 
   mentor   User          @relation("MentorConversations", fields: [mentorId], references: [id])
   learner  User          @relation("LearnerConversations", fields: [learnerId], references: [id])
@@ -341,4 +350,87 @@ model StorageSubscription {
 
   @@index([userId])
   @@map("storage_subscriptions")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model TwoFactor {
+  id                      String    @id @default(uuid())
+  secret                  String
+  backupCodes             String
+  userId                  String
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verified                Boolean?  @default(true)
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
+
+  @@index([secret])
+  @@index([userId])
+  @@map("twoFactor")
+}
+
+model Passkey {
+  id           String    @id @default(uuid())
+  name         String?
+  publicKey    String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime?
+  aaguid       String?
+
+  @@index([userId])
+  @@index([credentialID])
+  @@map("passkey")
 }

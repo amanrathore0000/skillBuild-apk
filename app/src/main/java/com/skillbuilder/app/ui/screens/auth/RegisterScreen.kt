@@ -1,6 +1,8 @@
 package com.skillbuilder.app.ui.screens.auth
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -68,12 +70,15 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
 import com.skillbuilder.app.R
+import com.skillbuilder.app.auth.DeveloperErrorInfo
 import com.skillbuilder.app.auth.GoogleAuthClient
 import com.skillbuilder.app.auth.GoogleAuthResult
 import com.skillbuilder.app.data.local.UserAccount
 import com.skillbuilder.app.data.local.UserAccountRepository
 import com.skillbuilder.app.data.local.UserSession
+import com.skillbuilder.app.ui.components.GoogleConfigErrorDialog
 import com.skillbuilder.app.util.CircularAvatarPicker
 import kotlinx.coroutines.launch
 
@@ -102,6 +107,47 @@ fun RegisterScreen(
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var developerErrorInfo by remember { mutableStateOf<DeveloperErrorInfo?>(null) }
+    var showDevDialog by remember { mutableStateOf(false) }
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isLoading = true
+        errorMessage = null
+        coroutineScope.launch {
+            when (val authResult = googleAuthClient.handleSignInResult(result.data)) {
+                is GoogleAuthResult.Success -> {
+                    val regResult = UserSession.authenticateWithGoogle(
+                        googleUser = authResult.user,
+                        isMentor = isMentor
+                    )
+                    isLoading = false
+                    regResult.onSuccess { user ->
+                        Toast.makeText(
+                            context,
+                            "Welcome, ${user.name}! Registered as ${if (user.isMentor) "Mentor" else "Learner"}.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        onRegisterSuccess()
+                    }.onFailure { err ->
+                        errorMessage = err.message ?: "Google Registration failed."
+                    }
+                }
+                is GoogleAuthResult.Canceled -> {
+                    isLoading = false
+                }
+                is GoogleAuthResult.Failure -> {
+                    isLoading = false
+                    errorMessage = authResult.errorMessage
+                    if (authResult.developerErrorInfo != null) {
+                        developerErrorInfo = authResult.developerErrorInfo
+                        showDevDialog = true
+                    }
+                }
+            }
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -215,71 +261,59 @@ fun RegisterScreen(
             Button(
                 onClick = {
                     if (!isLoading) {
-                        isLoading = true
                         errorMessage = null
-                        coroutineScope.launch {
-                            when (val result = googleAuthClient.signInWithGoogle()) {
-                                is GoogleAuthResult.Success -> {
-                                    isLoading = false
-                                    val regResult = UserSession.registerWithGoogle(
-                                        googleUser = result.user,
-                                        defaultIsMentor = isMentor
-                                    )
-                                    regResult.onSuccess { user ->
-                                        Toast.makeText(
-                                            context,
-                                            "Welcome, ${user.name}! Registered as ${if (user.isMentor) "Mentor" else "Learner"}.",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                        onRegisterSuccess()
-                                    }.onFailure { err ->
-                                        errorMessage = err.message ?: "Google Registration failed."
-                                    }
-                                }
-                                is GoogleAuthResult.Canceled -> {
-                                    isLoading = false
-                                }
-                                is GoogleAuthResult.Failure -> {
-                                    isLoading = false
-                                    errorMessage = "Google Sign-Up: ${result.errorMessage}"
-                                }
-                            }
+                        try {
+                            googleSignInLauncher.launch(googleAuthClient.getSignInIntent())
+                        } catch (e: Exception) {
+                            errorMessage = "Could not open Google Sign-In: ${e.message}"
                         }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
+                    .height(52.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color(0xFF1E1E1E) else Color.White,
+                    contentColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.White else Color(0xFF1F1F1F)
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                border = BorderStroke(1.dp, if (androidx.compose.foundation.isSystemInDarkTheme()) Color(0xFF444444) else Color(0xFFCCCCCC))
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(Color.White),
-                        contentAlignment = Alignment.Center
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "G",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp,
+                                color = Color(0xFF2464B8)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "G",
-                            fontWeight = FontWeight.Black,
-                            fontSize = 14.sp,
-                            color = Color(0xFF2464B8)
+                            text = if (isMentor) "Sign up as Mentor with Google" else "Sign up as Learner with Google",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp,
+                                color = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.White else Color(0xFF1F1F1F)
+                            )
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = if (isMentor) "Sign up as Mentor with Google" else "Sign up as Learner with Google",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
-                    )
                 }
             }
 
@@ -311,7 +345,10 @@ fun RegisterScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp),
+                        .padding(bottom = 12.dp)
+                        .clickable(enabled = developerErrorInfo != null) {
+                            showDevDialog = true
+                        },
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     ),
@@ -331,6 +368,15 @@ fun RegisterScreen(
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                                 modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        if (developerErrorInfo != null) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Tap here to view SHA-1 key & instructions or test with demo account →",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                             )
                         }
 
@@ -593,5 +639,30 @@ fun RegisterScreen(
                 }
             }
         }
+    }
+
+    if (showDevDialog && developerErrorInfo != null) {
+        GoogleConfigErrorDialog(
+            errorInfo = developerErrorInfo!!,
+            onDismiss = { showDevDialog = false },
+            onUseDemoAccount = {
+                isLoading = true
+                coroutineScope.launch {
+                    val demoUser = googleAuthClient.createDemoGoogleUser()
+                    val res = UserSession.authenticateWithGoogle(demoUser, isMentor = isMentor)
+                    isLoading = false
+                    res.onSuccess { user ->
+                        Toast.makeText(
+                            context,
+                            "Welcome, ${user.name}! (Demo Google Account)",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        onRegisterSuccess()
+                    }.onFailure { err ->
+                        errorMessage = err.message ?: "Registration failed"
+                    }
+                }
+            }
+        )
     }
 }

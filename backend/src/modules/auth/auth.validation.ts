@@ -2,6 +2,10 @@ import { z } from 'zod';
 
 export const GoogleLoginSchema = z.object({
   idToken: z.string().min(1, 'Google ID token is required'),
+  isMentor: z.boolean().optional().default(false),
+  email: z.string().email('Invalid email address').optional(),
+  name: z.string().optional(),
+  picture: z.string().optional(),
 });
 
 export const SignupSchema = z.object({
